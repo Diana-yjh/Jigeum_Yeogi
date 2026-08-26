@@ -1,30 +1,21 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:jigeum_yeogi/main.dart';
+import 'package:jigeum_yeogi/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('시작 화면에서 역할 선택 후 탭 셸로 진입한다',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(child: JigeumYeogiApp()));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // 시작 화면: 역할 선택 카드가 보인다.
+    expect(find.text('선생님으로 시작'), findsOneWidget);
+    expect(find.text('학부모로 시작'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // 선생님 선택 → 하단 탭(출석)이 나타난다.
+    await tester.tap(find.text('선생님으로 시작'));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('출석'), findsWidgets);
   });
 }

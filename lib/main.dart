@@ -1,20 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:jigeum_yeogi/app.dart';
 
 void main() {
-    runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-    const MyApp({super.key});
-
-@override
-Widget build(BuildContext context) {
-        return MaterialApp(
-            home: Scaffold(
-                body: Center(
-                    child: Text('Hello World'),
-                ),
-            ),
-        );
-    }
+  // Riverpod 전역 상태를 위해 ProviderScope로 감싼다.
+  runApp(const ProviderScope(child: JigeumYeogiApp()));
 }
