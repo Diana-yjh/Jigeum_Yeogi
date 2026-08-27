@@ -1,0 +1,93 @@
+rules_version = '2';
+
+// 지금여기 Firestore 보안 규칙 (Phase 2 초안)
+// 원칙:
+// - 학부모는 자기 자녀(students.parentUid == 본인)의 데이터만 읽기
+// - 선생님은 자기 teacherCode 소속 학생/기록만 읽기·쓰기
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── 헬퍼 ──────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    // 현재 사용자의 users 문서
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isParent() {
+      return isSignedIn() && userDoc().role == 'parent';
+    }
+    // 이 선생님이 소유한 코드인지
+    function ownsCode(code) {
+      return isSignedIn() && userDoc().teacherCode == code;
+    }
+
+    // ── users ────────────────────────────────────────────
+    // 본인 문서만 읽고 쓸 수 있다. (가입 시 최초 생성 포함)
+    match /users/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && request.auth.uid == uid
+                    // 역할·코드는 변경 불가
+                    && request.resource.data.role == resource.data.role
+                    && request.resource.data.get('teacherCode', null)
+                       == resource.data.get('teacherCode', null);
+      allow delete: if false;
+    }
+
+    // ── teachers/{code} ──────────────────────────────────
+    // 코드 검증을 위해 로그인 사용자는 조회 가능(학부모 가입 시 필요).
+    // 생성은 가입 트랜잭션에서 본인 uid로만. 수정/삭제 금지(코드 고정).
+    match /teachers/{code} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ── students ─────────────────────────────────────────
+    match /students/{studentId} {
+      // 학부모: 본인 자녀만. 선생님: 자기 코드 소속만.
+      allow read: if (isParent() && resource.data.parentUid == request.auth.uid)
+                  || ownsCode(resource.data.teacherCode);
+      // 학부모 자가등록: 본인을 parentUid로, 존재하는 코드로만 생성.
+      allow create: if isParent()
+                    && request.resource.data.parentUid == request.auth.uid
+                    && exists(/databases/$(database)/documents/teachers/$(request.resource.data.teacherCode));
+      // 선생님은 자기 코드 소속 학생 정보 수정 가능.
+      allow update: if ownsCode(resource.data.teacherCode);
+      allow delete: if false;
+    }
+
+    // ── attendance/{studentId}/records/{date} ────────────
+    // 학생 문서의 소유 관계를 따라 접근 통제.
+    match /attendance/{studentId}/records/{date} {
+      function student() {
+        return get(/databases/$(database)/documents/students/$(studentId)).data;
+      }
+      allow read: if (isParent() && student().parentUid == request.auth.uid)
+                  || ownsCode(student().teacherCode);
+      // 등원/하원 체크는 선생님만 기록.
+      allow write: if ownsCode(student().teacherCode);
+    }
+
+    // ── chats/{chatId}/messages/{messageId} ──────────────
+    match /chats/{chatId} {
+      allow read, write: if isSignedIn()
+                         && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn()
+                    && request.auth.uid in request.resource.data.participants;
+
+      match /messages/{messageId} {
+        function chat() {
+          return get(/databases/$(database)/documents/chats/$(chatId)).data;
+        }
+        allow read: if isSignedIn() && request.auth.uid in chat().participants;
+        allow create: if isSignedIn()
+                      && request.auth.uid in chat().participants
+                      && request.resource.data.senderUid == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+  }
+}

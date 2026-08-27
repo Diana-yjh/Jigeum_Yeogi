@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase 설정 파일 (API 키 포함) — 공개 저장소라 제외.
+# 각자 `flutterfire configure`로 생성할 것.
+lib/firebase_options.dart
+**/google-services.json
+**/GoogleService-Info.plist
+.firebase/
+firebase-debug.log

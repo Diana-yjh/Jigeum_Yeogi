@@ -12,7 +12,7 @@
 | Phase | 내용 | 상태 |
 |-------|------|------|
 | 1 | 프로젝트 세팅 — 구조·테마·역할 분기 라우팅·하단 탭 셸(더미) | ✅ 완료 |
-| 2 | Firebase 연동 — Auth, 온보딩(역할선택→코드발급/입력), Firestore 스키마·보안규칙 | ⬜ 예정 |
+| 2 | Firebase 연동 — Auth, 온보딩(역할선택→코드발급/입력), Firestore 스키마·보안규칙 | 🟡 코드 완료 · Firebase 설정 대기 |
 | 3 | 출석 기능 — 선생님 체크 + attendance 기록, 학부모 라이브 상태 카드 | ⬜ 예정 |
 | 4 | 출결 달력 (학부모/선생님 각각) | ⬜ 예정 |
 | 5 | 채팅 + 시스템 메시지 칩 | ⬜ 예정 |
@@ -92,18 +92,70 @@ flutter run
 
 ---
 
-## 다음 작업 (Phase 2 예정 항목)
+---
 
-- Firebase 프로젝트 연결 (Auth·Firestore·FCM), `firebase_options.dart` 생성
-- 온보딩 흐름: 역할 선택 → 선생님 회원가입(6자리 코드 자동 발급) / 학부모 회원가입(코드 + 자녀 이름 입력 → 학생 연결)
-- `session_provider`를 Firebase Auth 로그인 결과와 연동 (현재는 임시 역할 상태만 보관)
-- 라우팅에 온보딩 하위 단계(회원가입/코드 입력) 삽입
-- Firestore 초기 스키마 + 보안 규칙 (학부모=자녀 attendance만, 선생님=자기 teacherCode 소속만)
-- 설정 화면에 선생님 6자리 코드 표시
+## Phase 2 — 코드 완료 (🟡 Firebase 설정 대기)
 
-### 열어둔 구조 (추후)
-- 선생님이 외부 앱으로 초대 링크 전송 — 지금은 구조만 열어둠
+### 결정 사항
+- **Firebase 프로젝트**: 신규 생성(사용자가 직접 `flutterfire configure` 실행).
+- **학생 연결**: 학부모 **자가등록** — 코드+자녀 이름 입력 시 `students` 문서를 생성하고 `parentUid` 연결. 선생님 "학생 추가" UI 없이 가입 가능.
+- **상태관리**: 역할은 더 이상 수동 토글이 아니라 Firestore `users/{uid}.role`에서 로드 (`appUserProvider`). 기존 `session_provider.dart` 제거.
+
+### 추가된 의존성
+- `firebase_core`, `firebase_auth`, `cloud_firestore`
+
+### 구조 (신규/변경)
+```
+lib/
+  core/firebase/firebase_providers.dart   # FirebaseAuth·Firestore 인스턴스 provider
+  core/router/app_root.dart               # 인증 상태 기반 라우팅으로 개편
+  models/app_user.dart                    # users 문서 매핑
+  models/student.dart                     # students 문서 매핑
+  features/auth/
+    data/auth_repository.dart             # 로그인·회원가입·코드 발급·학생 자가등록
+    state/auth_providers.dart             # authState / appUser / repository provider
+    onboarding/auth_screen.dart           # 역할별 로그인·회원가입 폼
+  shared/widgets/splash_screen.dart       # 로딩 스플래시
+firestore.rules                           # 보안 규칙
+firebase.json / firestore.indexes.json    # 배포 설정
+```
+
+### 인증·온보딩 흐름
+- 시작 화면 → 역할 선택 → `AuthScreen(role)` (로그인/회원가입 토글)
+- **선생님 회원가입**: 이름/이메일/비번 → Auth 생성 → 고유 6자리 코드 트랜잭션 발급 → `users`(role=teacher, teacherCode) + `teachers/{code}` 문서 생성
+- **학부모 회원가입**: + 선생님 코드(검증) + 자녀 이름 → `users`(role=parent) + `students`(parentUid 연결) 배치 생성
+- 실패 시 방금 만든 Auth 계정 정리(고아 계정 방지)
+- 로그인 상태를 `AppRoot`가 감지 → 역할별 탭 셸 자동 진입
+- 설정 화면: 내 정보 + (선생님) 6자리 코드 표시 + 로그아웃
+
+### Firestore 스키마 (실제 생성 필드)
+- `users/{uid}`: role, name, email, teacherCode?(선생님), createdAt
+- `teachers/{code}`: uid, academyName, classes[], createdAt
+- `students/{id}`: name, teacherCode, parentUid, classId, scheduledDays[], createdAt
+
+### 보안 규칙 (`firestore.rules`)
+- users: 본인 문서만 read/write, role·teacherCode 변경 불가
+- teachers: 로그인 시 read(코드 검증용), 본인 uid로만 create, 수정·삭제 금지
+- students: 학부모=본인 자녀만, 선생님=자기 코드 소속만. 학부모 자가등록 create 허용(존재하는 코드로만)
+- attendance: 선생님만 쓰기, 학부모=자녀만 읽기
+- chats/messages: participants만 접근
+
+### ⚠️ 사용자가 직접 해야 하는 설정 (미완료 시 앱 실행 불가)
+1. `firebase login`
+2. `dart pub global activate flutterfire_cli`
+3. `flutterfire configure` → `lib/firebase_options.dart` 생성 (현재 이 파일이 없어 `flutter analyze`에 2건 오류 표시됨 — 정상)
+4. Firebase 콘솔에서 **Authentication → 이메일/비밀번호** 활성화
+5. `firebase deploy --only firestore:rules` 로 보안 규칙 배포
+6. Firestore 데이터베이스 생성(프로덕션 모드)
 
 ---
 
-_마지막 업데이트: Phase 1 완료 시점_
+## 열어둔 구조 / 다음 (Phase 3 이후)
+- 선생님이 외부 앱으로 초대 링크 전송 — 구조만 열어둠
+- 선생님 "학생 추가/관리" 화면 (현재는 학부모 자가등록으로 학생 생성)
+- FCM 토큰 저장 필드는 있으나 실제 푸시는 Phase 6
+- Phase 3: 출석 체크 → attendance 기록, 학부모 홈 라이브 상태 카드
+
+---
+
+_마지막 업데이트: Phase 2 코드 완료 시점_

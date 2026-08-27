@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
+import 'package:jigeum_yeogi/features/auth/onboarding/auth_screen.dart';
 import 'package:jigeum_yeogi/models/user_role.dart';
-import 'package:jigeum_yeogi/state/session_provider.dart';
 
-/// 시작 화면 — 선생님 / 학부모 역할 선택.
-///
-/// Phase 1: 선택 시 곧바로 해당 역할 탭으로 진입(더미).
-/// Phase 2: 여기서 각 역할의 회원가입/로그인 흐름으로 연결 예정.
-class RoleSelectScreen extends ConsumerWidget {
+/// 시작 화면 — 선생님 / 학부모 역할 선택 후 해당 역할의 로그인/회원가입으로 이동.
+class RoleSelectScreen extends StatelessWidget {
   const RoleSelectScreen({super.key});
 
+  void _goAuth(BuildContext context, Role role) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => AuthScreen(role: role)),
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -35,18 +37,14 @@ class RoleSelectScreen extends ConsumerWidget {
                 icon: Icons.groups_outlined,
                 title: '선생님으로 시작',
                 subtitle: '반 전체 등하원을 한눈에 관리해요',
-                onTap: () => ref
-                    .read(currentRoleProvider.notifier)
-                    .selectRole(Role.teacher),
+                onTap: () => _goAuth(context, Role.teacher),
               ),
               const SizedBox(height: AppSpace.md),
               _RoleCard(
                 icon: Icons.favorite_outline,
                 title: '학부모로 시작',
                 subtitle: '우리 아이 등하원을 실시간으로 확인해요',
-                onTap: () => ref
-                    .read(currentRoleProvider.notifier)
-                    .selectRole(Role.parent),
+                onTap: () => _goAuth(context, Role.parent),
               ),
               const SizedBox(height: AppSpace.xl),
             ],
