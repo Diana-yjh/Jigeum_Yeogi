@@ -70,15 +70,18 @@ class AuthRepository {
     required String childName,
   }) async {
     final code = teacherCode.trim();
-    // 1) 코드 유효성 먼저 확인(계정 만들기 전에).
-    final teacherDoc = await _db.collection('teachers').doc(code).get();
-    if (!teacherDoc.exists) {
-      throw const AuthFailure('선생님 코드를 찾을 수 없어요. 코드를 다시 확인해주세요.');
-    }
-
+    // 1) 계정을 먼저 생성해 로그인 상태로 만든다.
+    //    (teachers/students 접근 규칙이 로그인 사용자를 요구하기 때문)
     final cred = await _createAuthUser(email, password);
     final uid = cred.user!.uid;
     try {
+      // 2) 로그인 상태에서 코드 유효성 확인.
+      final teacherDoc = await _db.collection('teachers').doc(code).get();
+      if (!teacherDoc.exists) {
+        throw const AuthFailure('선생님 코드를 찾을 수 없어요. 코드를 다시 확인해주세요.');
+      }
+
+      // 3) users + students 자가등록.
       final batch = _db.batch();
       batch.set(_db.collection('users').doc(uid), {
         'role': 'parent',
