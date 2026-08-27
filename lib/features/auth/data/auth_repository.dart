@@ -36,6 +36,11 @@ class AuthRepository {
 
   Future<void> signOut() => _auth.signOut();
 
+  /// 사용자 문서 부분 업데이트(알림 설정 등).
+  Future<void> updateUserFields(String uid, Map<String, dynamic> fields) {
+    return _db.collection('users').doc(uid).set(fields, SetOptions(merge: true));
+  }
+
   /// 선생님 회원가입. 성공 시 발급된 6자리 코드를 반환.
   Future<String> signUpTeacher({
     required String name,

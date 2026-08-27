@@ -2,16 +2,88 @@
 
 `lib/features/settings/settings_screen.dart`
 
-## 화면 구성
-- 제목 "설정"
-- **내 정보 카드**: 이름 / 역할(선생님·학부모) / 이메일
-- **선생님 전용 — 우리 반 코드 카드**: 6자리 코드 크게 표시(글자 간격 강조) + "학부모님께 이 코드를 알려주세요"
-- **로그아웃** 버튼(아웃라인, pill)
+# 설정 화면 (학부모)
+
+전제: `design/CLAUDE.md`의 토큰과 공통 컴포넌트를 쓴다.
+
+## 목적
+
+내 계정 확인, 연결된 아이/선생님 관리, 알림 on/off. 자주 오는 화면이 아니므로 조용하게.
+
+## 레이아웃 (위→아래)
+
+세로 스크롤 `ListView`. 좌우 패딩 16, 카드 간 간격 10. 섹션 라벨은 카드 위에 12 textSecondary, 좌측 4 들여쓰기, 위 4 / 아래 6 여백.
+
+1. 타이틀 `설정` 20 / w600
+2. 프로필 카드
+3. 섹션 `우리 아이`
+4. 섹션 `알림`
+5. 기타 카드
+6. 로그아웃 텍스트
+7. `ParentTabBar` (설정 활성)
+
+### 2. 프로필 카드
+
+`AppCard`, 탭하면 프로필 편집(미구현이면 no-op, chevron은 유지).
+- 좌: 지름 40 원, 배경 divider, 이름 첫 글자 w600 textSecondary (아이 아바타와 색을 다르게 — 부모는 회색, 아이는 오렌지)
+- 중: 이름 14 / w600, 아래 `학부모 · a@gmail.com` 12 textSecondary, ellipsis
+- 우: chevron 아이콘 textMuted
+- 기존 "이름 / 역할 / 이메일" 3행 표 구조는 삭제.
+
+### 3. 우리 아이
+
+`AppCard(padding: h12 v4)`. 행 높이 약 40, 행 사이 `divider` 1px 선(첫 행 제외).
+
+| 행 | 좌 | 우 |
+|---|---|---|
+| 아이 | `ChildAvatar(size: 24)` + 이름 14 | 학원명 12 textSecondary |
+| 선생님 코드 | `선생님 코드` 14 | 6자리 코드, 모노스페이스, onPrimaryTint. 탭하면 클립보드 복사 + 스낵바 `복사했어요` |
+| 아이 추가 | `아이 추가` 14 | `+` 아이콘 textMuted. 탭하면 코드 입력 플로우 |
+
+아이가 여러 명이면 아이 행이 반복되고 선생님 코드는 아이 행마다 따라간다(아이별로 선생님이 다를 수 있음).
+
+### 4. 알림
+
+`AppCard(padding: h12 v4)`. 각 행 좌 라벨 14, 우 `Toggle`.
+
+| 라벨 | 기본값 | 키 |
+|---|---|---|
+| 등원 알림 | on | `notifyCheckIn` |
+| 하원 알림 | on | `notifyCheckOut` |
+| 선생님 채팅 | on | `notifyChat` |
+
+토글 변경 즉시 Firestore 사용자 문서에 저장. 저장 실패 시 토글 원복 + 스낵바.
+(목업에서는 채팅이 off로 그려져 있지만 기본값은 on. 데모 데이터일 뿐.)
+
+### 5. 기타
+
+`AppCard(padding: h12 v4)`.
+- `앱 버전` / `1.0.0` 12 textSecondary (`package_info_plus`에서 읽기)
+- `문의하기` / chevron. 탭하면 메일 앱 또는 링크.
+
+### 6. 로그아웃
+
+카드 없이 중앙 정렬 텍스트 12 textSecondary, 위 6 / 아래 2 여백. 탭하면 `AlertDialog`로 확인 후 로그아웃.
+기존 화면 하단의 오렌지 테두리 큰 버튼은 삭제한다. 파괴적 액션은 눈에 덜 띄게.
 
 ## 데이터
-- `appUserProvider`(users 문서), `AuthRepository.signOut`.
 
-## 규칙 / 제약
-- **선생님 6자리 코드는 불변**. 재생성·변경 기능을 만들지 않는다.
-- 코드는 학부모 회원가입(코드 + 자녀 이름) 및 초대에 사용.
-- (향후) 외부 앱 초대 링크 전송 — 구조만 열어둠.
+```dart
+class ParentProfile {
+  final String name;
+  final String email;
+  final List<LinkedChild> children;
+  final NotificationPrefs notify;
+}
+class LinkedChild {
+  final String name;
+  final String academyName;
+  final String teacherCode; // 6자리 고정
+}
+```
+
+## 하지 말 것
+
+- 설정 화면에 오렌지 면 넣지 않는다. 오렌지는 토글 on 상태와 선생님 코드 글자색까지만.
+- 행 안에 아이콘을 좌측에 나열하지 않는다(iOS 설정 앱 스타일 금지). 라벨 텍스트만.
+- 빈 공간을 채우려고 섹션을 더 만들지 않는다. 이 화면은 짧아도 된다.

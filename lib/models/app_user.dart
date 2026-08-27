@@ -8,7 +8,9 @@ class AppUser {
   final String name;
   final String email;
   final String? teacherCode; // 선생님만 보유하는 6자리 코드
-  final String? fcmToken; // 푸시용 — Phase 6에서 채움
+  final String? fcmToken; // 미사용
+  final bool notifyCheckIn; // 등원 알림 (기본 on)
+  final bool notifyCheckOut; // 하원 알림 (기본 on)
 
   const AppUser({
     required this.uid,
@@ -17,6 +19,8 @@ class AppUser {
     required this.email,
     this.teacherCode,
     this.fcmToken,
+    this.notifyCheckIn = true,
+    this.notifyCheckOut = true,
   });
 
   factory AppUser.fromMap(String uid, Map<String, dynamic> map) {
@@ -27,6 +31,8 @@ class AppUser {
       email: (map['email'] as String?) ?? '',
       teacherCode: map['teacherCode'] as String?,
       fcmToken: map['fcmToken'] as String?,
+      notifyCheckIn: (map['notifyCheckIn'] as bool?) ?? true,
+      notifyCheckOut: (map['notifyCheckOut'] as bool?) ?? true,
     );
   }
 

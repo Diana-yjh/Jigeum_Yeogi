@@ -12,6 +12,16 @@ class JigeumYeogiApp extends StatelessWidget {
       title: '지금여기',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      // 글씨를 전체적으로 키운다(시스템 접근성 배율 위에 12% 기본 확대).
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: TextScaler.linear(mq.textScaler.scale(1.12)),
+          ),
+          child: child!,
+        );
+      },
       home: const AppRoot(),
     );
   }

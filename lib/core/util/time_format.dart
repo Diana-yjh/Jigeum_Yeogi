@@ -33,6 +33,12 @@ String formatHhmm(String hhmm) {
   return '$ampm $h12:${m.toString().padLeft(2, '0')}';
 }
 
+/// DateTime → "14:30" 24시간 형식(로컬).
+String clock(DateTime t) {
+  final l = t.toLocal();
+  return '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}';
+}
+
 /// DateTime → "오후 3:02" 형식(로컬 시각).
 String formatKoreanTime(DateTime t) {
   final l = t.toLocal();

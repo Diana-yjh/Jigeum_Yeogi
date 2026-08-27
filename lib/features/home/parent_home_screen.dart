@@ -7,216 +7,288 @@ import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
-import 'package:jigeum_yeogi/models/schedule_entry.dart';
 import 'package:jigeum_yeogi/models/student.dart';
+import 'package:jigeum_yeogi/shared/widgets/status_pill.dart';
 
-/// 학부모 홈 — 내 아이 라이브 상태 카드 + 주간 요약.
+/// 학부모 홈 — "우리 아이가 지금 어디 있는지"가 1초 안에 읽히는 화면.
 class ParentHomeScreen extends ConsumerWidget {
   const ParentHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final child = ref.watch(childProvider).value;
-    final record = ref.watch(childTodayRecordProvider).value;
+    final today = ref.watch(childTodayRecordProvider).value;
     final week = ref.watch(childWeekRecordsProvider).value ?? const [];
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: ListView(
           padding: const EdgeInsets.all(AppSpace.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('우리 아이', style: AppText.caption),
-              const SizedBox(height: AppSpace.xs),
-              Text(child?.name ?? '연결된 자녀 없음', style: AppText.screenTitle),
-              const SizedBox(height: AppSpace.lg),
-              _LiveCard(child: child, record: record),
-              const SizedBox(height: AppSpace.md),
-              _WeeklyRecords(child: child, records: week),
-            ],
-          ),
+          children: [
+            _Header(name: child?.name ?? '연결된 자녀 없음'),
+            const SizedBox(height: AppSpace.md),
+            _HeroCard(record: today),
+            const SizedBox(height: AppSpace.md),
+            _WeekCard(child: child, week: week),
+          ],
         ),
       ),
     );
   }
 }
 
-/// 내 아이 라이브 상태 카드 — 화면의 중심.
-class _LiveCard extends StatelessWidget {
-  final Student? child;
-  final AttendanceRecord? record;
-  const _LiveCard({required this.child, required this.record});
+/// 헤더 — 아바타 + 이름 + 종 아이콘.
+class _Header extends StatelessWidget {
+  final String name;
+  const _Header({required this.name});
 
   @override
   Widget build(BuildContext context) {
-    final inClass =
-        record?.isCheckedIn == true && record?.isCheckedOut != true;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpace.lg),
-      decoration: inClass ? AppDecoration.hero() : AppDecoration.card(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _statusBadge(inClass),
-          const SizedBox(height: AppSpace.md),
-          Text(
-            _title(),
-            style: AppText.sectionTitle.copyWith(
-              color: inClass ? Colors.white : AppColors.textMain,
-            ),
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: AppColors.primarySoft,
+          child: Text(
+            name.characters.first,
+            style: AppText.cardTitle.copyWith(color: AppColors.primaryDeep),
           ),
-          const SizedBox(height: AppSpace.xs),
-          Text(
-            _subtitle(),
-            style: AppText.caption.copyWith(
-              color: inClass ? Colors.white70 : AppColors.textSub,
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: AppSpace.sm),
+        Expanded(
+          child: Text(name,
+              style: AppText.sectionTitle, overflow: TextOverflow.ellipsis),
+        ),
+        const Icon(Icons.notifications_none,
+            size: 22, color: AppColors.textSub),
+      ],
     );
-  }
-
-  Widget _statusBadge(bool inClass) {
-    final label = _badgeLabel();
-    return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: AppSpace.md, vertical: 6),
-      decoration: BoxDecoration(
-        color: inClass ? Colors.white24 : AppColors.primarySoft,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.circle,
-              size: 8,
-              color: inClass ? Colors.white : AppColors.primaryDeep),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: AppText.caption.copyWith(
-              color: inClass ? Colors.white : AppColors.primaryDeep,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _badgeLabel() {
-    if (child == null) return '대기 중';
-    if (record?.isCheckedOut == true) return '하원 완료';
-    if (record?.isCheckedIn == true) return '학원에 있어요';
-    if (record?.status == AttendanceStatus.expectedAbsent) return '결석 예정';
-    return '등원 전';
-  }
-
-  String _title() {
-    if (child == null) return '아직 연결된 자녀가 없어요';
-    if (record?.isCheckedOut == true) return '오늘 하원했어요';
-    if (record?.isCheckedIn == true) return '지금 학원에 있어요';
-    if (record?.status == AttendanceStatus.expectedAbsent) {
-      return '오늘은 결석 예정이에요';
-    }
-    return '아직 등원 전이에요';
-  }
-
-  String _subtitle() {
-    if (child == null) return '가입 시 입력한 자녀가 곧 연결됩니다.';
-    final r = record;
-    if (r == null || (!r.isCheckedIn)) return '등원하면 알려드릴게요.';
-    if (r.isCheckedOut) {
-      final stay = r.stayDuration;
-      final stayText = stay != null ? ' · 총 ${formatDuration(stay)}' : '';
-      return '${formatKoreanTime(r.checkInAt!)} 등원 → '
-          '${formatKoreanTime(r.checkOutAt!)} 하원$stayText';
-    }
-    // 등원 후 수업 중
-    final elapsed = DateTime.now().difference(r.checkInAt!);
-    return '${formatKoreanTime(r.checkInAt!)} 등원 · ${formatDuration(elapsed)}째 수업 중';
   }
 }
 
-/// 주간 출석 기록 — 이번 주 출석 횟수 + 요일·날짜·등하원 시간·정규/보충.
-class _WeeklyRecords extends StatelessWidget {
-  final Student? child;
-  final List<AttendanceRecord> records;
-  const _WeeklyRecords({required this.child, required this.records});
+/// 오늘 상태 히어로 카드 — 화면에서 유일한 오렌지 면.
+class _HeroCard extends StatelessWidget {
+  final AttendanceRecord? record;
+  const _HeroCard({required this.record});
 
   @override
   Widget build(BuildContext context) {
-    final present = records.where((r) => r.isCheckedIn).toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final checkIn = record?.checkInAt;
+    final checkOut = record?.checkOutAt;
+    final hasIn = checkIn != null;
+    final hasOut = checkOut != null;
+
+    final String pill;
+    final String title;
+    if (hasOut) {
+      pill = '하원 완료';
+      title = '집에 잘 갔어요';
+    } else if (hasIn) {
+      pill = '학원에 있어요';
+      title = '지금 학원에 있어요';
+    } else {
+      pill = '등원 전';
+      title = '아직 등원 전이에요';
+    }
+
+    final now = DateTime.now();
+    final dateLabel = '${weekdayLabelOf(now)} ${now.month}/${now.day}';
 
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(AppSpace.md),
-      decoration: AppDecoration.card(),
+      decoration: AppDecoration.hero(radius: AppRadius.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('이번 주 출석', style: AppText.caption),
-              Text('${present.length}회',
-                  style: AppText.cardTitle
-                      .copyWith(color: AppColors.primaryDeep)),
+              StatusPill.onHero(pill),
+              Text(dateLabel,
+                  style: AppText.caption
+                      .copyWith(color: Colors.white.withValues(alpha: 0.85))),
             ],
           ),
-          if (present.isEmpty) ...[
-            const SizedBox(height: AppSpace.sm),
-            const Text('이번 주 출석 기록이 없어요.', style: AppText.caption),
-          ] else
-            for (final r in present) ...[
-              const Divider(height: AppSpace.lg, color: AppColors.cardBorder),
-              _recordRow(r),
-            ],
+          const SizedBox(height: 10),
+          Text(title,
+              style: AppText.cardTitle.copyWith(color: Colors.white)),
+          const SizedBox(height: 12),
+          _Timeline(hasIn: hasIn, hasOut: hasOut, checkIn: checkIn, checkOut: checkOut),
+          if (hasIn) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                hasOut
+                    ? '${_stayText(checkIn, checkOut)} 머물렀어요'
+                    : '${clock(checkIn)}부터 학원에 있어요',
+                style: AppText.caption
+                    .copyWith(color: Colors.white.withValues(alpha: 0.9)),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _recordRow(AttendanceRecord r) {
-    final date = DateTime.parse(r.date);
-    final dow = weekdayLabelOf(date);
-    final md = '${date.month}/${date.day}';
-    final inT = formatKoreanTime(r.checkInAt!);
-    final outT =
-        r.checkOutAt != null ? formatKoreanTime(r.checkOutAt!) : '수업 중';
-    final isMakeup =
-        (child?.typeOn(weekdayCodeOf(date)) ?? ClassType.regular) ==
-            ClassType.makeup;
+  String _stayText(DateTime inAt, DateTime outAt) =>
+      formatDuration(outAt.difference(inAt));
+}
 
+/// 히어로 카드 안 등원~하원 타임라인.
+class _Timeline extends StatelessWidget {
+  final bool hasIn;
+  final bool hasOut;
+  final DateTime? checkIn;
+  final DateTime? checkOut;
+  const _Timeline({
+    required this.hasIn,
+    required this.hasOut,
+    required this.checkIn,
+    required this.checkOut,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const faint = Color(0x59FFFFFF); // 흰색 35%
     return Row(
       children: [
-        SizedBox(
-          width: 56,
-          child: Text('$dow $md', style: AppText.body),
-        ),
-        Expanded(
-          child: Text('$inT → $outT', style: AppText.caption),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: isMakeup ? AppColors.primarySoft : AppColors.sageSoft,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-          ),
-          child: Text(
-            isMakeup ? '보충' : '정규',
-            style: AppText.caption.copyWith(
-                color: isMakeup ? AppColors.primaryDeep : AppColors.sageDeep,
-                fontWeight: FontWeight.w600),
-          ),
-        ),
+        _end('등원', checkIn),
+        const SizedBox(width: AppSpace.sm),
+        _dot(hasIn),
+        Expanded(child: Container(height: 3, color: hasIn ? Colors.white : faint)),
+        Expanded(child: Container(height: 3, color: hasOut ? Colors.white : faint)),
+        _dot(hasOut),
+        const SizedBox(width: AppSpace.sm),
+        _end('하원', checkOut),
       ],
+    );
+  }
+
+  Widget _dot(bool filled) {
+    return Container(
+      width: 9,
+      height: 9,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: filled ? Colors.white : Colors.transparent,
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+    );
+  }
+
+  Widget _end(String label, DateTime? t) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(label,
+            style: AppText.caption
+                .copyWith(color: Colors.white.withValues(alpha: 0.8))),
+        const SizedBox(height: 2),
+        Text(t != null ? clock(t) : '--:--',
+            style: AppText.body
+                .copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+}
+
+/// 이번 주 출석 카드 — 월~일 도트.
+class _WeekCard extends StatelessWidget {
+  final Student? child;
+  final List<AttendanceRecord> week;
+  const _WeekCard({required this.child, required this.week});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final monday = today.subtract(Duration(days: today.weekday - 1));
+    final byDate = {for (final r in week) r.date: r};
+    final scheduled = child?.scheduledDays.toSet() ?? <String>{};
+
+    final attendedCount = week.where((r) => r.isCheckedIn).length;
+    final denom = scheduled.length;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpace.md),
+      decoration: AppDecoration.card(),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('이번 주',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textMain)),
+              Text(denom > 0 ? '$attendedCount / $denom회' : '$attendedCount회',
+                  style: AppText.caption),
+            ],
+          ),
+          const SizedBox(height: AppSpace.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (var i = 0; i < 7; i++)
+                _dayCell(monday.add(Duration(days: i)), i, today, byDate,
+                    scheduled),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dayCell(DateTime date, int i, DateTime today,
+      Map<String, AttendanceRecord> byDate, Set<String> scheduled) {
+    final code = weekdayCodes[i];
+    final attended = byDate[dateKey(date)]?.isCheckedIn == true;
+    final isScheduled = scheduled.contains(code);
+    final isPast = date.isBefore(today);
+
+    Widget circle;
+    Color labelColor = AppColors.textSub;
+    if (attended) {
+      circle = _circle(
+          bg: AppColors.primary,
+          child: const Icon(Icons.check, size: 12, color: Colors.white));
+      labelColor = AppColors.primaryDeep;
+    } else if (isScheduled && isPast) {
+      circle = _circle(
+          bg: AppColors.cardBorder,
+          child: Text('—',
+              style: AppText.caption.copyWith(color: AppColors.textFaint)));
+    } else if (isScheduled) {
+      circle = _circle(
+          border: Border.all(color: AppColors.textFaint, width: 1));
+    } else {
+      circle = const SizedBox(width: 22, height: 22);
+    }
+
+    return Column(
+      children: [
+        Text(weekdayLabels[i],
+            style: AppText.caption.copyWith(color: labelColor)),
+        const SizedBox(height: 8),
+        circle,
+      ],
+    );
+  }
+
+  Widget _circle({Color? bg, BoxBorder? border, Widget? child}) {
+    return Container(
+      width: 22,
+      height: 22,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bg,
+        border: border,
+        shape: BoxShape.circle,
+      ),
+      child: child,
     );
   }
 }
