@@ -296,6 +296,7 @@ class _TeacherSettings extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final studentCount = ref.watch(teacherStudentsProvider).value?.length ?? 0;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -318,6 +319,7 @@ class _TeacherSettings extends ConsumerWidget {
                     _row('이름', user.name),
                     _row('역할', '선생님'),
                     _row('이메일', user.email),
+                    _row('우리 반 학생', '$studentCount명'),
                   ],
                 ),
               ),
