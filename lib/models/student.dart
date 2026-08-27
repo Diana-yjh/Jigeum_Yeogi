@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:jigeum_yeogi/models/schedule_entry.dart';
 
 /// Firestore `students/{studentId}` 문서와 매핑되는 학생 모델.
 class Student {
@@ -8,9 +9,9 @@ class Student {
   final String? parentUid;
   final String? classId;
 
-  /// 매주 반복 스케줄. 요일 코드 → 등원 시각("HH:mm").
-  /// 예: { 'mon': '15:00', 'wed': '16:30' }
-  final Map<String, String> schedule;
+  /// 매주 반복 스케줄. 요일 코드 → 스케줄 항목(시간+유형).
+  /// 예: { 'mon': {time:'15:00', type:'regular'}, 'sat': {time:'14:00', type:'makeup'} }
+  final Map<String, ScheduleEntry> schedule;
 
   const Student({
     required this.id,
@@ -25,19 +26,23 @@ class Student {
   List<String> get scheduledDays => schedule.keys.toList();
 
   /// 특정 요일의 등원 시각("HH:mm") — 없으면 null.
-  String? timeOn(String dayCode) => schedule[dayCode];
+  String? timeOn(String dayCode) => schedule[dayCode]?.time;
+
+  /// 특정 요일의 수업 유형 — 없으면 null.
+  ClassType? typeOn(String dayCode) => schedule[dayCode]?.type;
 
   factory Student.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final map = doc.data() ?? const {};
 
-    // 신규: schedule 맵. 레거시: scheduledDays 배열(시간 없음).
+    final schedule = <String, ScheduleEntry>{};
     final rawSchedule = map['schedule'];
-    final schedule = <String, String>{};
     if (rawSchedule is Map) {
-      rawSchedule.forEach((k, v) => schedule['$k'] = '$v');
+      // 신규: {day: {time,type}} 또는 레거시 {day: "HH:mm"}.
+      rawSchedule.forEach((k, v) => schedule['$k'] = ScheduleEntry.fromValue(v));
     } else if (map['scheduledDays'] is List) {
+      // 레거시: 요일 배열만(시간·유형 미설정).
       for (final d in (map['scheduledDays'] as List)) {
-        schedule['$d'] = ''; // 시간 미설정
+        schedule['$d'] = const ScheduleEntry(time: '');
       }
     }
 
@@ -56,7 +61,7 @@ class Student {
         'teacherCode': teacherCode,
         'parentUid': parentUid,
         'classId': classId,
-        'schedule': schedule,
+        'schedule': {for (final e in schedule.entries) e.key: e.value.toMap()},
         'scheduledDays': scheduledDays,
       };
 }

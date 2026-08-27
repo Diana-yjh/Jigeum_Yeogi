@@ -7,6 +7,7 @@ import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
 import 'package:jigeum_yeogi/features/schedule/state/schedule_providers.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
+import 'package:jigeum_yeogi/models/schedule_entry.dart';
 
 /// 선생님 홈 — 오늘 등원 예정 아이들과 등원 현황.
 class TeacherHomeScreen extends ConsumerWidget {
@@ -60,6 +61,7 @@ class TeacherHomeScreen extends ConsumerWidget {
                           return _ScheduledRow(
                             name: s.name,
                             scheduledTime: s.timeOn(todayCode),
+                            isMakeup: s.typeOn(todayCode) == ClassType.makeup,
                             record: recById[s.id],
                           );
                         },
@@ -115,10 +117,12 @@ class _ProgressCard extends StatelessWidget {
 class _ScheduledRow extends StatelessWidget {
   final String name;
   final String? scheduledTime; // 오늘 등원 예정 시각("HH:mm")
+  final bool isMakeup;
   final AttendanceRecord? record;
   const _ScheduledRow({
     required this.name,
     required this.scheduledTime,
+    required this.isMakeup,
     required this.record,
   });
 
@@ -165,7 +169,25 @@ class _ScheduledRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: AppText.body),
+                Row(
+                  children: [
+                    Text(name, style: AppText.body),
+                    if (isMakeup) ...[
+                      const SizedBox(width: AppSpace.sm),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.chipNeutral,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Text('보충',
+                            style: AppText.caption
+                                .copyWith(color: AppColors.textSub)),
+                      ),
+                    ],
+                  ],
+                ),
                 Text('등원 예정 $timeLabel', style: AppText.caption),
               ],
             ),

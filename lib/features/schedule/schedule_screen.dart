@@ -8,11 +8,11 @@ import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
 import 'package:jigeum_yeogi/features/calendar/widgets/calendar_cells.dart';
 import 'package:jigeum_yeogi/features/schedule/state/schedule_providers.dart';
+import 'package:jigeum_yeogi/features/schedule/student_schedule_screen.dart';
+import 'package:jigeum_yeogi/models/schedule_entry.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 
-const _defaultSlot = '15:00';
-
-/// 선생님 스케줄 화면 — 매주 반복(요일+시간) 편집 + 월간 보기.
+/// 선생님 스케줄 화면 — 학생별 설정(탭 → 상세) + 월간 보기.
 class ScheduleScreen extends ConsumerStatefulWidget {
   const ScheduleScreen({super.key});
 
@@ -21,7 +21,7 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 }
 
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
-  int _mode = 0; // 0: 주간 편집, 1: 월간 보기
+  int _mode = 0; // 0: 학생별 설정, 1: 월간 보기
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +42,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
               const SizedBox(height: AppSpace.md),
               SegmentedButton<int>(
                 segments: const [
-                  ButtonSegment(value: 0, label: Text('주간 편집')),
+                  ButtonSegment(value: 0, label: Text('학생별 설정')),
                   ButtonSegment(value: 1, label: Text('월간 보기')),
                 ],
                 selected: {_mode},
@@ -77,7 +77,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                       );
                     }
                     return _mode == 0
-                        ? _WeeklyEditor(students: students)
+                        ? _StudentList(students: students)
                         : _MonthlyView(students: students);
                   },
                 ),
@@ -120,134 +120,99 @@ class _TodaySummary extends StatelessWidget {
   }
 }
 
-/// 주간 편집 — 학생별 요일 토글 + 요일별 시간(30분 단위).
-class _WeeklyEditor extends ConsumerWidget {
+/// 학생 목록 — 탭하면 학생 스케줄 상세로 이동.
+class _StudentList extends StatelessWidget {
   final List<Student> students;
-  const _WeeklyEditor({required this.students});
+  const _StudentList({required this.students});
 
-  void _toggleDay(WidgetRef ref, Student s, String code) {
-    final next = Map<String, String>.from(s.schedule);
-    if (next.containsKey(code)) {
-      next.remove(code);
-    } else {
-      next[code] = _defaultSlot;
-    }
-    ref.read(scheduleRepositoryProvider).setSchedule(s.id, next);
+  String _summary(Student s) {
+    if (s.schedule.isEmpty) return '스케줄 미설정';
+    final parts = [
+      for (var d = 0; d < 7; d++)
+        if (s.schedule.containsKey(weekdayCodes[d])) weekdayLabels[d]
+    ];
+    return parts.join('·');
   }
 
-  void _setTime(WidgetRef ref, Student s, String code, String time) {
-    final next = Map<String, String>.from(s.schedule)..[code] = time;
-    ref.read(scheduleRepositoryProvider).setSchedule(s.id, next);
-  }
+  bool _hasMakeup(Student s) =>
+      s.schedule.values.any((e) => e.type == ClassType.makeup);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return ListView.separated(
       itemCount: students.length,
       separatorBuilder: (_, _) => const SizedBox(height: AppSpace.sm),
       itemBuilder: (_, i) {
         final s = students[i];
-        // 선택된 요일들(요일 순서대로).
-        final onDays = [
-          for (var d = 0; d < 7; d++)
-            if (s.schedule.containsKey(weekdayCodes[d])) d
-        ];
-        return Container(
-          padding: const EdgeInsets.all(AppSpace.md),
-          decoration: BoxDecoration(
-            color: AppColors.card,
+        return Material(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(color: AppColors.cardBorder, width: 0.5),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(s.name, style: AppText.cardTitle),
-              const SizedBox(height: AppSpace.sm),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => StudentScheduleScreen(student: s)),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(AppSpace.md),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                border:
+                    Border.all(color: AppColors.cardBorder, width: 0.5),
+              ),
+              child: Row(
                 children: [
-                  for (var d = 0; d < 7; d++)
-                    _dayToggle(ref, s, d),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.primarySoft,
+                    child: Text(s.name.characters.first,
+                        style: AppText.cardTitle
+                            .copyWith(color: AppColors.primaryDeep)),
+                  ),
+                  const SizedBox(width: AppSpace.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(s.name, style: AppText.cardTitle),
+                            if (_hasMakeup(s)) ...[
+                              const SizedBox(width: AppSpace.sm),
+                              _makeupTag(),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(_summary(s), style: AppText.caption),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right,
+                      color: AppColors.textFaint),
                 ],
               ),
-              if (onDays.isNotEmpty) ...[
-                const SizedBox(height: AppSpace.sm),
-                const Divider(height: 1, color: AppColors.cardBorder),
-                const SizedBox(height: AppSpace.xs),
-                for (final d in onDays) _timeRow(ref, s, d),
-              ],
-            ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _dayToggle(WidgetRef ref, Student s, int dayIndex) {
-    final code = weekdayCodes[dayIndex];
-    final on = s.schedule.containsKey(code);
-    return GestureDetector(
-      onTap: () => _toggleDay(ref, s, code),
-      child: Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: on ? AppColors.primary : AppColors.chipNeutral,
-          shape: BoxShape.circle,
-        ),
-        child: Text(
-          weekdayLabels[dayIndex],
-          style: AppText.caption.copyWith(
-            color: on ? Colors.white : AppColors.textSub,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+  Widget _makeupTag() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.chipNeutral,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
-    );
-  }
-
-  Widget _timeRow(WidgetRef ref, Student s, int dayIndex) {
-    final code = weekdayCodes[dayIndex];
-    final time = s.schedule[code];
-    final value = (time != null && scheduleTimeSlots.contains(time)) ? time : null;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 28,
-            child: Text(weekdayLabels[dayIndex],
-                style: AppText.body.copyWith(color: AppColors.primaryDeep)),
-          ),
-          const SizedBox(width: AppSpace.sm),
-          Expanded(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              underline: const SizedBox.shrink(),
-              hint: const Text('시간 선택', style: AppText.caption),
-              items: [
-                for (final slot in scheduleTimeSlots)
-                  DropdownMenuItem(
-                    value: slot,
-                    child: Text(formatHhmm(slot), style: AppText.body),
-                  ),
-              ],
-              onChanged: (t) {
-                if (t != null) _setTime(ref, s, code, t);
-              },
-            ),
-          ),
-        ],
-      ),
+      child: Text('보충 포함',
+          style: AppText.caption.copyWith(color: AppColors.textSub)),
     );
   }
 }
 
-/// 월간 보기 — 날짜 선택 시 그 요일 등원 예정 명단(시간 포함).
+/// 월간 보기 — 날짜 선택 시 그 요일 등원 예정 명단(시간·유형).
 class _MonthlyView extends ConsumerStatefulWidget {
   final List<Student> students;
   const _MonthlyView({required this.students});
@@ -318,29 +283,35 @@ class _MonthlyViewState extends ConsumerState<_MonthlyView> {
           if (selectedList.isEmpty)
             const Text('이 날 등원 예정인 학생이 없어요.', style: AppText.caption)
           else
-            ...selectedList.map((s) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundColor: AppColors.primarySoft,
-                        child: Text(s.name.characters.first,
-                            style: AppText.caption
-                                .copyWith(color: AppColors.primaryDeep)),
-                      ),
-                      const SizedBox(width: AppSpace.sm),
-                      Expanded(child: Text(s.name, style: AppText.body)),
-                      Text(
-                        (s.timeOn(code)?.isNotEmpty ?? false)
-                            ? formatHhmm(s.timeOn(code)!)
-                            : '시간 미정',
-                        style: AppText.caption
-                            .copyWith(color: AppColors.primaryDeep),
-                      ),
-                    ],
-                  ),
-                )),
+            ...selectedList.map((s) => _row(s, code)),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(Student s, String code) {
+    final time = s.timeOn(code);
+    final isMakeup = s.typeOn(code) == ClassType.makeup;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: AppColors.primarySoft,
+            child: Text(s.name.characters.first,
+                style: AppText.caption.copyWith(color: AppColors.primaryDeep)),
+          ),
+          const SizedBox(width: AppSpace.sm),
+          Expanded(child: Text(s.name, style: AppText.body)),
+          if (isMakeup) ...[
+            Text('보충 ',
+                style: AppText.caption.copyWith(color: AppColors.textSub)),
+          ],
+          Text(
+            (time != null && time.isNotEmpty) ? formatHhmm(time) : '시간 미정',
+            style: AppText.caption.copyWith(color: AppColors.primaryDeep),
+          ),
         ],
       ),
     );
