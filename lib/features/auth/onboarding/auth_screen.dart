@@ -26,7 +26,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _teacherCode = TextEditingController();
   final _childName = TextEditingController();
 
-  bool _isSignUp = true;
+  bool _isSignUp = false; // 로그인 화면으로 먼저 진입, "회원가입" 링크로 전환
   bool _loading = false;
 
   bool get _isTeacher => widget.role == Role.teacher;
