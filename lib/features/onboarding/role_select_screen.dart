@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
+import 'package:jigeum_yeogi/core/theme/app_decorations.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/features/auth/onboarding/auth_screen.dart';
@@ -26,7 +27,7 @@ class RoleSelectScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Spacer(),
-              Text('지금여기', style: AppText.screenTitle.copyWith(fontSize: 32)),
+              Text('지금여기', style: AppText.display.copyWith(fontSize: 36)),
               const SizedBox(height: AppSpace.sm),
               const Text(
                 '우리 아이가 학원에 잘 도착했는지\n실시간으로 안심하세요',
@@ -71,16 +72,13 @@ class _RoleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.card,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.card),
         onTap: onTap,
         child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(color: AppColors.cardBorder, width: 0.5),
-          ),
+          decoration: AppDecoration.card(),
           padding: const EdgeInsets.all(AppSpace.lg),
           child: Row(
             children: [

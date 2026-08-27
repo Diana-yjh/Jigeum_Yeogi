@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
+import 'package:jigeum_yeogi/core/theme/app_decorations.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
@@ -114,11 +115,8 @@ class _ProgressCard extends StatelessWidget {
     final ratio = total == 0 ? 0.0 : checkedIn / total;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpace.md),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
+      padding: const EdgeInsets.all(AppSpace.lg),
+      decoration: AppDecoration.hero(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -181,7 +179,7 @@ class _ScheduledRow extends StatelessWidget {
         : '시간 미정';
 
     return Material(
-      color: AppColors.card,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.card),
@@ -189,11 +187,7 @@ class _ScheduledRow extends StatelessWidget {
         onTap: done ? onReset : null,
         child: Container(
       padding: const EdgeInsets.all(AppSpace.md),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.cardBorder, width: 0.5),
-      ),
+      decoration: AppDecoration.card(),
       child: Row(
         children: [
           CircleAvatar(

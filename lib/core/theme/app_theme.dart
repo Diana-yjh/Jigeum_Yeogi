@@ -23,18 +23,35 @@ abstract class AppTheme {
         bodyMedium: AppText.body,
         bodySmall: AppText.caption,
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: AppColors.card,
-        elevation: 0,
+        elevation: 6,
+        shadowColor: const Color(0x14453121),
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppRadius.card)),
-          side: BorderSide(color: AppColors.cardBorder, width: 0.5),
+          borderRadius: BorderRadius.circular(AppRadius.card),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.card,
         indicatorColor: AppColors.primarySoft,
-        labelTextStyle: WidgetStateProperty.all(AppText.caption),
+        elevation: 0,
+        height: 66,
+        surfaceTintColor: Colors.transparent,
+        labelTextStyle: WidgetStateProperty.all(
+            AppText.caption.copyWith(fontWeight: FontWeight.w600)),
+        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? AppColors.primaryDeep
+                  : AppColors.textFaint,
+            )),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.card,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
+import 'package:jigeum_yeogi/core/theme/app_decorations.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/features/attendance/models/attendance_student.dart';
@@ -21,11 +22,7 @@ class StudentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(AppSpace.md),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.cardBorder, width: 0.5),
-      ),
+      decoration: AppDecoration.card(),
       child: Row(
         children: [
           CircleAvatar(

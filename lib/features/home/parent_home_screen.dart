@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
+import 'package:jigeum_yeogi/core/theme/app_decorations.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
@@ -56,11 +57,7 @@ class _LiveCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpace.lg),
-      decoration: BoxDecoration(
-        color: inClass ? AppColors.primary : AppColors.card,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.cardBorder, width: 0.5),
-      ),
+      decoration: inClass ? AppDecoration.hero() : AppDecoration.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -160,11 +157,7 @@ class _WeeklyRecords extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpace.md),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.cardBorder, width: 0.5),
-      ),
+      decoration: AppDecoration.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -213,13 +206,14 @@ class _WeeklyRecords extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: isMakeup ? AppColors.chipNeutral : AppColors.primarySoft,
+            color: isMakeup ? AppColors.primarySoft : AppColors.sageSoft,
             borderRadius: BorderRadius.circular(AppRadius.pill),
           ),
           child: Text(
             isMakeup ? '보충' : '정규',
             style: AppText.caption.copyWith(
-                color: isMakeup ? AppColors.textSub : AppColors.primaryDeep),
+                color: isMakeup ? AppColors.primaryDeep : AppColors.sageDeep,
+                fontWeight: FontWeight.w600),
           ),
         ),
       ],

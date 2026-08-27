@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
+import 'package:jigeum_yeogi/core/theme/app_decorations.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
@@ -57,11 +58,7 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
   Widget _calendar(Map<String, AttendanceRecord> byDate) {
     return Container(
       padding: const EdgeInsets.all(AppSpace.sm),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.cardBorder, width: 0.5),
-      ),
+      decoration: AppDecoration.card(),
       child: TableCalendar<AttendanceRecord>(
         firstDay: DateTime(2024, 1, 1),
         lastDay: DateTime(DateTime.now().year + 1, 12, 31),
@@ -112,11 +109,7 @@ class _DetailCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpace.md),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.cardBorder, width: 0.5),
-      ),
+      decoration: AppDecoration.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
