@@ -10,6 +10,7 @@ import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart
 import 'package:jigeum_yeogi/features/attendance/widgets/attendance_filter.dart';
 import 'package:jigeum_yeogi/features/attendance/widgets/attendance_header.dart';
 import 'package:jigeum_yeogi/features/attendance/widgets/student_card.dart';
+import 'package:jigeum_yeogi/features/calendar/teacher_calendar_screen.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 
@@ -85,7 +86,24 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AttendanceHeader(dateLabel: dateLabel, title: '오늘 출석'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: AttendanceHeader(
+                        dateLabel: dateLabel, title: '오늘 출석'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.calendar_month_outlined,
+                        color: AppColors.primaryDeep),
+                    tooltip: '출결 달력',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const TeacherCalendarScreen()),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: AppSpace.lg),
               studentsAsync.when(
                 loading: () => const Expanded(

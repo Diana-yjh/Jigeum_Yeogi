@@ -9,6 +9,12 @@ String formatKoreanTime(DateTime t) {
   return '$ampm $h12:$mm';
 }
 
+/// yyyy-MM 월 키.
+String monthKey(DateTime d) {
+  final l = d.toLocal();
+  return '${l.year}-${l.month.toString().padLeft(2, '0')}';
+}
+
 /// yyyy-MM-dd 날짜 키.
 String dateKey(DateTime d) {
   final l = d.toLocal();

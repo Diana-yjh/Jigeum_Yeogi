@@ -62,3 +62,25 @@ final childWeekRecordsProvider =
       .watch(attendanceRepositoryProvider)
       .childRecordsBetween(uid, dateKey(monday), dateKey(sunday));
 });
+
+// ── 달력(월별) ───────────────────────────────────────────
+// 인자는 "yyyy-MM" 월 키. 날짜가 문자열이라 01~31 사전식 범위로 조회.
+/// 내 아이의 특정 월 출석 기록.
+final childMonthRecordsProvider =
+    StreamProvider.family<List<AttendanceRecord>, String>((ref, month) {
+  final uid = ref.watch(appUserProvider).value?.uid;
+  if (uid == null) return Stream.value(const []);
+  return ref
+      .watch(attendanceRepositoryProvider)
+      .childRecordsBetween(uid, '$month-01', '$month-31');
+});
+
+/// 선생님 반의 특정 월 출석 기록.
+final teacherMonthRecordsProvider =
+    StreamProvider.family<List<AttendanceRecord>, String>((ref, month) {
+  final code = ref.watch(appUserProvider).value?.teacherCode;
+  if (code == null) return Stream.value(const []);
+  return ref
+      .watch(attendanceRepositoryProvider)
+      .teacherRecordsBetween(code, '$month-01', '$month-31');
+});

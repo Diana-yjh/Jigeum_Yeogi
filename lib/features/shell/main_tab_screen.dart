@@ -4,7 +4,7 @@ import 'package:jigeum_yeogi/models/user_role.dart';
 import 'package:jigeum_yeogi/features/home/teacher_home_screen.dart';
 import 'package:jigeum_yeogi/features/home/parent_home_screen.dart';
 import 'package:jigeum_yeogi/features/attendance/attendance_screen.dart';
-import 'package:jigeum_yeogi/features/calendar/calendar_screen.dart';
+import 'package:jigeum_yeogi/features/calendar/parent_calendar_screen.dart';
 import 'package:jigeum_yeogi/features/chat/chat_list_screen.dart';
 import 'package:jigeum_yeogi/features/settings/settings_screen.dart';
 
@@ -38,7 +38,7 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
     return const [
       _TabItem(Icons.home_outlined, Icons.home, '홈', ParentHomeScreen()),
       _TabItem(Icons.calendar_month_outlined, Icons.calendar_month, '달력',
-          CalendarScreen()),
+          ParentCalendarScreen()),
       _TabItem(
           Icons.chat_bubble_outline, Icons.chat_bubble, '채팅', ChatListScreen()),
       _TabItem(Icons.settings_outlined, Icons.settings, '설정', SettingsScreen()),

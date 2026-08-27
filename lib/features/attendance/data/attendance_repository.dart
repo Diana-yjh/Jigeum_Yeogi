@@ -54,6 +54,17 @@ class AttendanceRepository {
     }, SetOptions(merge: true));
   }
 
+  /// 선생님 반의 임의 구간(달력 월 등) 출석 기록.
+  Stream<List<AttendanceRecord>> teacherRecordsBetween(
+      String teacherCode, String startDate, String endDate) {
+    return _attendance
+        .where('teacherCode', isEqualTo: teacherCode)
+        .where('date', isGreaterThanOrEqualTo: startDate)
+        .where('date', isLessThanOrEqualTo: endDate)
+        .snapshots()
+        .map((s) => s.docs.map(AttendanceRecord.fromDoc).toList());
+  }
+
   // ── 학부모 ─────────────────────────────────────────────
   Stream<Student?> childOf(String parentUid) {
     return _students
