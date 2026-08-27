@@ -48,6 +48,20 @@ lib/
 
 각 feature는 `data/`(Repository) · `state/`(Riverpod provider) · 화면/`widgets/`로 구성한다.
 
+## 탭별 요구사항
+
+각 탭의 상세 요구사항은 `docs/specs/<탭이름>.md`에 있다. **해당 탭 작업 전에 반드시 읽는다.**
+
+| 탭 | 파일 |
+|----|------|
+| 홈 (선생님·학부모) | `docs/specs/home.md` |
+| 출석 (선생님) | `docs/specs/attendance.md` |
+| 스케줄 (선생님) | `docs/specs/schedule.md` |
+| 달력 (학부모) | `docs/specs/calendar.md` |
+| 설정 (공통) | `docs/specs/settings.md` |
+
+인덱스: `docs/specs/README.md`
+
 ## 코딩 규칙
 
 - 색상은 `AppColors`의 토큰만 사용. 위젯 안에서 `Color(0xFF...)`나 `Colors.orange`를 직접 쓰지 않는다. 배경은 화이트/베이지, primary는 오렌지 계열 — 새 색이 필요하면 토큰을 먼저 추가하고 사용한다.
