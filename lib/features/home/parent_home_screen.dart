@@ -24,10 +24,11 @@ class ParentHomeScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(AppSpace.md),
+          padding: const EdgeInsets.fromLTRB(
+              AppSpace.md, AppSpace.md, AppSpace.md, AppSpace.xl),
           children: [
             _Header(name: child?.name ?? '연결된 자녀 없음'),
-            const SizedBox(height: AppSpace.md),
+            const SizedBox(height: AppSpace.lg),
             _HeroCard(record: today),
             const SizedBox(height: AppSpace.md),
             _WeekCard(child: child, week: week),
@@ -38,30 +39,49 @@ class ParentHomeScreen extends ConsumerWidget {
   }
 }
 
-/// 헤더 — 아바타 + 이름 + 종 아이콘.
+/// 헤더 — 아바타 + 이름/날짜 + 종 버튼.
 class _Header extends StatelessWidget {
   final String name;
   const _Header({required this.name});
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final dateText = '${now.month}월 ${now.day}일 ${weekdayLabelOf(now)}요일';
+
     return Row(
       children: [
         CircleAvatar(
-          radius: 18,
+          radius: 24,
           backgroundColor: AppColors.primarySoft,
           child: Text(
             name.characters.first,
-            style: AppText.cardTitle.copyWith(color: AppColors.primaryDeep),
+            style: AppText.sectionTitle.copyWith(color: AppColors.primaryDeep),
           ),
         ),
-        const SizedBox(width: AppSpace.sm),
+        const SizedBox(width: AppSpace.md),
         Expanded(
-          child: Text(name,
-              style: AppText.sectionTitle, overflow: TextOverflow.ellipsis),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name,
+                  style: AppText.sectionTitle,
+                  overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 2),
+              Text(dateText, style: AppText.caption),
+            ],
+          ),
         ),
-        const Icon(Icons.notifications_none,
-            size: 22, color: AppColors.textSub),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: const BoxDecoration(
+            color: AppColors.card,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.notifications_none,
+              size: 20, color: AppColors.textSub),
+        ),
       ],
     );
   }
@@ -92,35 +112,25 @@ class _HeroCard extends StatelessWidget {
       title = '아직 등원 전이에요';
     }
 
-    final now = DateTime.now();
-    final dateLabel = '${weekdayLabelOf(now)} ${now.month}/${now.day}';
-
     return Container(
-      padding: const EdgeInsets.all(AppSpace.md),
-      decoration: AppDecoration.hero(radius: AppRadius.sm),
+      padding: const EdgeInsets.all(AppSpace.lg),
+      decoration: AppDecoration.hero(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              StatusPill.onHero(pill),
-              Text(dateLabel,
-                  style: AppText.caption
-                      .copyWith(color: Colors.white.withValues(alpha: 0.85))),
-            ],
-          ),
-          const SizedBox(height: 10),
+          StatusPill.onHero(pill),
+          const SizedBox(height: AppSpace.md),
           Text(title,
-              style: AppText.cardTitle.copyWith(color: Colors.white)),
-          const SizedBox(height: 12),
-          _Timeline(hasIn: hasIn, hasOut: hasOut, checkIn: checkIn, checkOut: checkOut),
+              style: AppText.sectionTitle.copyWith(color: Colors.white)),
+          const SizedBox(height: AppSpace.lg),
+          _Timeline(
+              hasIn: hasIn, hasOut: hasOut, checkIn: checkIn, checkOut: checkOut),
           if (hasIn) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpace.md),
             Center(
               child: Text(
                 hasOut
-                    ? '${_stayText(checkIn, checkOut)} 머물렀어요'
+                    ? '${formatDuration(checkOut.difference(checkIn))} 머물렀어요'
                     : '${clock(checkIn)}부터 학원에 있어요',
                 style: AppText.caption
                     .copyWith(color: Colors.white.withValues(alpha: 0.9)),
@@ -131,9 +141,6 @@ class _HeroCard extends StatelessWidget {
       ),
     );
   }
-
-  String _stayText(DateTime inAt, DateTime outAt) =>
-      formatDuration(outAt.difference(inAt));
 }
 
 /// 히어로 카드 안 등원~하원 타임라인.
@@ -151,14 +158,13 @@ class _Timeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const faint = Color(0x59FFFFFF); // 흰색 35%
     return Row(
       children: [
         _end('등원', checkIn),
         const SizedBox(width: AppSpace.sm),
         _dot(hasIn),
-        Expanded(child: Container(height: 3, color: hasIn ? Colors.white : faint)),
-        Expanded(child: Container(height: 3, color: hasOut ? Colors.white : faint)),
+        Expanded(child: _line(hasIn)),
+        Expanded(child: _line(hasOut)),
         _dot(hasOut),
         const SizedBox(width: AppSpace.sm),
         _end('하원', checkOut),
@@ -166,29 +172,38 @@ class _Timeline extends StatelessWidget {
     );
   }
 
+  Widget _line(bool filled) {
+    const faint = Color(0x40FFFFFF);
+    return Container(
+      height: 4,
+      decoration: BoxDecoration(
+        color: filled ? Colors.white : faint,
+        borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+
   Widget _dot(bool filled) {
     return Container(
-      width: 9,
-      height: 9,
+      width: 11,
+      height: 11,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: filled ? Colors.white : Colors.transparent,
-        border: Border.all(color: Colors.white, width: 1.5),
+        border: Border.all(color: Colors.white, width: 2),
       ),
     );
   }
 
   Widget _end(String label, DateTime? t) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(label,
             style: AppText.caption
                 .copyWith(color: Colors.white.withValues(alpha: 0.8))),
-        const SizedBox(height: 2),
+        const SizedBox(height: 3),
         Text(t != null ? clock(t) : '--:--',
-            style: AppText.body
-                .copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+            style: AppText.cardTitle.copyWith(color: Colors.white)),
       ],
     );
   }
@@ -212,23 +227,35 @@ class _WeekCard extends StatelessWidget {
     final denom = scheduled.length;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpace.md),
+      padding: const EdgeInsets.all(AppSpace.lg),
       decoration: AppDecoration.card(),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('이번 주',
+              const Text('이번 주 출석',
                   style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textMain)),
-              Text(denom > 0 ? '$attendedCount / $denom회' : '$attendedCount회',
-                  style: AppText.caption),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  denom > 0 ? '$attendedCount / $denom회' : '$attendedCount회',
+                  style: AppText.caption.copyWith(
+                      color: AppColors.primaryDeep,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: AppSpace.md),
+          const SizedBox(height: AppSpace.lg),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -248,24 +275,28 @@ class _WeekCard extends StatelessWidget {
     final attended = byDate[dateKey(date)]?.isCheckedIn == true;
     final isScheduled = scheduled.contains(code);
     final isPast = date.isBefore(today);
+    final isToday = date == today;
 
     Widget circle;
     Color labelColor = AppColors.textSub;
     if (attended) {
       circle = _circle(
           bg: AppColors.primary,
-          child: const Icon(Icons.check, size: 12, color: Colors.white));
+          child: const Icon(Icons.check, size: 15, color: Colors.white));
+      labelColor = AppColors.primaryDeep;
+    } else if (isToday) {
+      circle = _circle(border: Border.all(color: AppColors.primary, width: 2));
       labelColor = AppColors.primaryDeep;
     } else if (isScheduled && isPast) {
       circle = _circle(
-          bg: AppColors.cardBorder,
+          bg: AppColors.chipNeutral,
           child: Text('—',
               style: AppText.caption.copyWith(color: AppColors.textFaint)));
     } else if (isScheduled) {
-      circle = _circle(
-          border: Border.all(color: AppColors.textFaint, width: 1));
+      circle =
+          _circle(border: Border.all(color: AppColors.cardBorder, width: 1.5));
     } else {
-      circle = const SizedBox(width: 22, height: 22);
+      circle = const SizedBox(width: 30, height: 30);
     }
 
     return Column(
@@ -280,8 +311,8 @@ class _WeekCard extends StatelessWidget {
 
   Widget _circle({Color? bg, BoxBorder? border, Widget? child}) {
     return Container(
-      width: 22,
-      height: 22,
+      width: 30,
+      height: 30,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: bg,
