@@ -44,7 +44,7 @@ class SettingsScreen extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () => ref.read(authRepositoryProvider).signOut(),
+                  onPressed: () => _confirmSignOut(context, ref),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primaryDeep,
                     side: const BorderSide(color: AppColors.primary),
@@ -60,6 +60,31 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// 로그아웃 전 확인 알림.
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('로그아웃'),
+        content: const Text('로그아웃 하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primaryDeep),
+            child: const Text('로그아웃'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await ref.read(authRepositoryProvider).signOut();
+    }
   }
 
   Widget _row(String label, String value) {
