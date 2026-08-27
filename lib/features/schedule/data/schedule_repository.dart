@@ -7,18 +7,16 @@ class ScheduleRepository {
   ScheduleRepository(this._db);
   final FirebaseFirestore _db;
 
-  /// 학생의 반복 스케줄을 통째로 갱신(merge).
-  /// scheduledDays(요일 키 배열)도 함께 저장해 일관성 유지.
+  /// 학생의 반복 스케줄을 통째로 교체.
+  /// merge로 저장하면 중첩 맵(schedule)이 키 단위로 병합되어 삭제한 요일이
+  /// 남으므로, update로 schedule 맵 전체를 교체한다(학생 문서는 항상 존재).
   Future<void> setSchedule(
       String studentId, Map<String, ScheduleEntry> schedule) {
-    return _db.collection('students').doc(studentId).set(
-      {
-        'schedule': {
-          for (final e in schedule.entries) e.key: e.value.toMap(),
-        },
-        'scheduledDays': schedule.keys.toList(),
+    return _db.collection('students').doc(studentId).update({
+      'schedule': {
+        for (final e in schedule.entries) e.key: e.value.toMap(),
       },
-      SetOptions(merge: true),
-    );
+      'scheduledDays': schedule.keys.toList(),
+    });
   }
 }
