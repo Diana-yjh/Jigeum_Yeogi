@@ -12,7 +12,7 @@
 | Phase | 내용 | 상태 |
 |-------|------|------|
 | 1 | 프로젝트 세팅 — 구조·테마·역할 분기 라우팅·하단 탭 셸(더미) | ✅ 완료 |
-| 2 | Firebase 연동 — Auth, 온보딩(역할선택→코드발급/입력), Firestore 스키마·보안규칙 | 🟡 코드 완료 · Firebase 설정 대기 |
+| 2 | Firebase 연동 — Auth, 온보딩(역할선택→코드발급/입력), Firestore 스키마·보안규칙 | ✅ 완료 (실기기 확인) |
 | 3 | 출석 기능 — 선생님 체크 + attendance 기록, 학부모 라이브 상태 카드 | ⬜ 예정 |
 | 4 | 출결 달력 (학부모/선생님 각각) | ⬜ 예정 |
 | 5 | 채팅 + 시스템 메시지 칩 | ⬜ 예정 |
@@ -94,10 +94,14 @@ flutter run
 
 ---
 
-## Phase 2 — 코드 완료 (🟡 Firebase 설정 대기)
+## Phase 2 — 완료 ✅ (실기기 확인)
+
+- **Firebase 프로젝트**: `jigeum-yeogi-25737` (리전 asia-northeast3 서울)
+- 콘솔: https://console.firebase.google.com/project/jigeum-yeogi-25737/overview
+- iOS/Android/macOS 앱 등록 완료, Firestore·이메일 인증 활성화, 보안 규칙 배포 완료
 
 ### 결정 사항
-- **Firebase 프로젝트**: 신규 생성(사용자가 직접 `flutterfire configure` 실행).
+- **Firebase 프로젝트**: 신규 생성(`flutterfire configure`로 앱 등록).
 - **학생 연결**: 학부모 **자가등록** — 코드+자녀 이름 입력 시 `students` 문서를 생성하고 `parentUid` 연결. 선생님 "학생 추가" UI 없이 가입 가능.
 - **상태관리**: 역할은 더 이상 수동 토글이 아니라 Firestore `users/{uid}.role`에서 로드 (`appUserProvider`). 기존 `session_provider.dart` 제거.
 
@@ -140,13 +144,20 @@ firebase.json / firestore.indexes.json    # 배포 설정
 - attendance: 선생님만 쓰기, 학부모=자녀만 읽기
 - chats/messages: participants만 접근
 
-### ⚠️ 사용자가 직접 해야 하는 설정 (미완료 시 앱 실행 불가)
-1. `firebase login`
-2. `dart pub global activate flutterfire_cli`
-3. `flutterfire configure` → `lib/firebase_options.dart` 생성 (현재 이 파일이 없어 `flutter analyze`에 2건 오류 표시됨 — 정상)
-4. Firebase 콘솔에서 **Authentication → 이메일/비밀번호** 활성화
-5. `firebase deploy --only firestore:rules` 로 보안 규칙 배포
-6. Firestore 데이터베이스 생성(프로덕션 모드)
+### 완료된 설정 (모두 처리됨)
+1. ✅ `firebase login` (재인증)
+2. ✅ `flutterfire_cli` 설치 + `flutterfire configure`
+3. ✅ `lib/firebase_options.dart` 생성 (iOS/Android/macOS)
+4. ✅ Authentication → 이메일/비밀번호 활성화
+5. ✅ Firestore DB 생성(서울) + 보안 규칙 배포
+6. ✅ iOS 최소 버전 15.0 상향 (Firebase SDK 요구)
+
+### ⚠️ 새 환경에서 clone 시 (공개 저장소라 설정 파일 제외됨)
+설정 파일은 `.gitignore` 처리되어 있으므로, clone 후 아래를 실행해야 실행 가능:
+```
+dart pub global activate flutterfire_cli
+flutterfire configure --project=jigeum-yeogi-25737
+```
 
 ---
 
