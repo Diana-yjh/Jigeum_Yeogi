@@ -23,11 +23,15 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 
 class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   int _mode = 0; // 0: 학생별 설정, 1: 월간 보기
+  DateTime _selected = DateTime.now(); // 월간 보기에서 선택한 날짜
 
   @override
   Widget build(BuildContext context) {
     final studentsAsync = ref.watch(teacherStudentsProvider);
-    final todayScheduled = ref.watch(todayScheduledStudentsProvider);
+    // 학생별 설정 모드는 오늘, 월간 보기 모드는 선택 날짜 기준으로 요약.
+    final summaryDate = _mode == 1 ? _selected : DateTime.now();
+    final summaryCount =
+        ref.watch(scheduledOnProvider(weekdayCodeOf(summaryDate))).length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -39,7 +43,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             children: [
               Text('스케줄', style: AppText.screenTitle),
               const SizedBox(height: AppSpace.md),
-              _TodaySummary(count: todayScheduled.length),
+              _ScheduleSummary(date: summaryDate, count: summaryCount),
               const SizedBox(height: AppSpace.md),
               _SegmentToggle(
                 labels: const ['학생별 설정', '월간 보기'],
@@ -66,7 +70,11 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     }
                     return _mode == 0
                         ? _StudentList(students: students)
-                        : _MonthlyView(students: students);
+                        : _MonthlyView(
+                            students: students,
+                            selected: _selected,
+                            onSelected: (d) => setState(() => _selected = d),
+                          );
                   },
                 ),
               ),
@@ -140,14 +148,21 @@ class _SegmentToggle extends StatelessWidget {
   }
 }
 
-/// 오늘 등원 예정 요약.
-class _TodaySummary extends StatelessWidget {
+/// 등원 예정 요약 — 선택 날짜(또는 오늘) 기준.
+class _ScheduleSummary extends StatelessWidget {
+  final DateTime date;
   final int count;
-  const _TodaySummary({required this.count});
+  const _ScheduleSummary({required this.date, required this.count});
 
   @override
   Widget build(BuildContext context) {
-    final today = weekdayLabelOf(DateTime.now());
+    final now = DateTime.now();
+    final isToday =
+        date.year == now.year && date.month == now.month && date.day == now.day;
+    final label = isToday
+        ? '오늘(${weekdayLabelOf(date)}) 등원 예정 $count명'
+        : '${date.month}월 ${date.day}일(${weekdayLabelOf(date)}) 등원 예정 $count명';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpace.md),
@@ -160,7 +175,7 @@ class _TodaySummary extends StatelessWidget {
           const Icon(Icons.event_available, color: AppColors.primaryDeep),
           const SizedBox(width: AppSpace.sm),
           Expanded(
-            child: Text('오늘($today) 등원 예정 $count명',
+            child: Text(label,
                 style:
                     AppText.cardTitle.copyWith(color: AppColors.primaryDeep)),
           ),
@@ -259,9 +274,16 @@ class _StudentList extends StatelessWidget {
 }
 
 /// 월간 보기 — 날짜 선택 시 그 요일 등원 예정 명단(시간·유형).
+/// 선택 날짜는 부모(ScheduleScreen)가 소유해 상단 요약과 공유한다.
 class _MonthlyView extends ConsumerStatefulWidget {
   final List<Student> students;
-  const _MonthlyView({required this.students});
+  final DateTime selected;
+  final ValueChanged<DateTime> onSelected;
+  const _MonthlyView({
+    required this.students,
+    required this.selected,
+    required this.onSelected,
+  });
 
   @override
   ConsumerState<_MonthlyView> createState() => _MonthlyViewState();
@@ -269,11 +291,54 @@ class _MonthlyView extends ConsumerStatefulWidget {
 
 class _MonthlyViewState extends ConsumerState<_MonthlyView> {
   DateTime _focused = DateTime.now();
-  DateTime _selected = DateTime.now();
+  DateTime get _selected => widget.selected;
 
   int _countOn(DateTime day) {
     final code = weekdayCodeOf(day);
     return widget.students.where((s) => s.schedule.containsKey(code)).length;
+  }
+
+  /// 날짜 + 그 날 등원 예정 인원수. 색 원 대신 숫자로 의미를 준다.
+  Widget _cell(DateTime day,
+      {bool isToday = false, bool isSelected = false, bool outside = false}) {
+    final count = outside ? 0 : _countOn(day);
+    final numberColor = outside
+        ? AppColors.textFaint
+        : isSelected
+            ? Colors.white
+            : (isToday ? AppColors.primaryDeep : AppColors.textMain);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            alignment: Alignment.center,
+            decoration: isSelected
+                ? const BoxDecoration(
+                    color: AppColors.primary, shape: BoxShape.circle)
+                : null,
+            child: Text('${day.day}',
+                style: TextStyle(
+                    fontSize: 14,
+                    color: numberColor,
+                    fontWeight:
+                        (isSelected || isToday) ? FontWeight.w700 : FontWeight.w400)),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            count > 0 ? '$count' : '',
+            style: AppText.caption.copyWith(
+                fontSize: 11,
+                color: AppColors.primaryDeep,
+                fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -292,11 +357,13 @@ class _MonthlyViewState extends ConsumerState<_MonthlyView> {
               firstDay: DateTime(2024, 1, 1),
               lastDay: DateTime(DateTime.now().year + 1, 12, 31),
               focusedDay: _focused,
+              rowHeight: 64, // 날짜+인원수 두 줄 여유(글씨 확대 대응)
+              daysOfWeekHeight: 24,
               selectedDayPredicate: (d) => isSameDay(d, _selected),
-              onDaySelected: (selected, focused) => setState(() {
-                _selected = selected;
-                _focused = focused;
-              }),
+              onDaySelected: (selected, focused) {
+                setState(() => _focused = focused);
+                widget.onSelected(selected); // 부모로 선택 날짜 전달
+              },
               onPageChanged: (focused) => setState(() => _focused = focused),
               headerStyle: HeaderStyle(
                 formatButtonVisible: false,
@@ -307,12 +374,11 @@ class _MonthlyViewState extends ConsumerState<_MonthlyView> {
               ),
               calendarBuilders: CalendarBuilders<Object>(
                 dowBuilder: (context, day) => koreanDow(day),
-                defaultBuilder: (context, day, _) =>
-                    attendanceCell(day, attended: _countOn(day) > 0),
-                todayBuilder: (context, day, _) => attendanceCell(day,
-                    attended: _countOn(day) > 0, isToday: true),
-                selectedBuilder: (context, day, _) => attendanceCell(day,
-                    attended: _countOn(day) > 0, isSelected: true),
+                defaultBuilder: (context, day, _) => _cell(day),
+                todayBuilder: (context, day, _) => _cell(day, isToday: true),
+                selectedBuilder: (context, day, _) =>
+                    _cell(day, isSelected: true),
+                outsideBuilder: (context, day, _) => _cell(day, outside: true),
               ),
             ),
           ),
