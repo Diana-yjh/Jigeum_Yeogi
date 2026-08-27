@@ -62,6 +62,17 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # G마켓 산스 — 앱 전역 폰트
+  fonts:
+    - family: GmarketSans
+      fonts:
+        - asset: assets/fonts/GmarketSansLight.otf
+          weight: 300
+        - asset: assets/fonts/GmarketSansMedium.otf
+          weight: 500
+        - asset: assets/fonts/GmarketSansBold.otf
+          weight: 700
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

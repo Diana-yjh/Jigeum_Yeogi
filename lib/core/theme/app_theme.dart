@@ -15,6 +15,7 @@ abstract class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      fontFamily: 'GmarketSans', // 앱 전역 폰트
       scaffoldBackgroundColor: AppColors.background,
       textTheme: const TextTheme(
         titleLarge: AppText.screenTitle,
