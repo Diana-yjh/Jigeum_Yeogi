@@ -33,8 +33,6 @@ class ParentHomeScreen extends ConsumerWidget {
               _LiveCard(child: child, record: record),
               const SizedBox(height: AppSpace.md),
               _StatsRow(records: week),
-              const SizedBox(height: AppSpace.md),
-              _ChatPreviewPlaceholder(),
             ],
           ),
         ),
@@ -194,31 +192,6 @@ class _StatsRow extends StatelessWidget {
           Text(label, style: AppText.caption),
           const SizedBox(height: AppSpace.xs),
           Text(value, style: AppText.screenTitle.copyWith(fontSize: 20)),
-        ],
-      ),
-    );
-  }
-}
-
-/// 새 소식(채팅 미리보기) — Phase 5 연결 예정.
-class _ChatPreviewPlaceholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpace.md),
-      decoration: BoxDecoration(
-        color: AppColors.chipNeutral,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.chat_bubble_outline, color: AppColors.textSub),
-          const SizedBox(width: AppSpace.sm),
-          const Expanded(
-            child: Text('선생님과의 채팅은 곧 열려요 (Phase 5)',
-                style: AppText.caption),
-          ),
         ],
       ),
     );
