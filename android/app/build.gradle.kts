@@ -22,7 +22,7 @@ android {
         applicationId = "com.example.jigeum_yeogi"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 23 // Firebase(Auth/Firestore) 요구 최소 버전
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
