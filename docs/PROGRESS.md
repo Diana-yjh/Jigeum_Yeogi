@@ -13,7 +13,7 @@
 |-------|------|------|
 | 1 | 프로젝트 세팅 — 구조·테마·역할 분기 라우팅·하단 탭 셸(더미) | ✅ 완료 |
 | 2 | Firebase 연동 — Auth, 온보딩(역할선택→코드발급/입력), Firestore 스키마·보안규칙 | ✅ 완료 (실기기 확인) |
-| 3 | 출석 기능 — 선생님 체크 + attendance 기록, 학부모 라이브 상태 카드 | ⬜ 예정 |
+| 3 | 출석 기능 — 선생님 체크 + attendance 기록, 학부모 라이브 상태 카드 | ✅ 완료 (실기기 확인) |
 | 4 | 출결 달력 (학부모/선생님 각각) | ⬜ 예정 |
 | 5 | 채팅 + 시스템 메시지 칩 | ⬜ 예정 |
 | 6 | FCM 푸시 (등원/하원 알림) | ⬜ 예정 |
@@ -161,12 +161,44 @@ flutterfire configure --project=jigeum-yeogi-25737
 
 ---
 
-## 열어둔 구조 / 다음 (Phase 3 이후)
-- 선생님이 외부 앱으로 초대 링크 전송 — 구조만 열어둠
-- 선생님 "학생 추가/관리" 화면 (현재는 학부모 자가등록으로 학생 생성)
-- FCM 토큰 저장 필드는 있으나 실제 푸시는 Phase 6
-- Phase 3: 출석 체크 → attendance 기록, 학부모 홈 라이브 상태 카드
+## Phase 3 — 완료 ✅ (실기기 확인)
+
+### 스키마 개선
+- 스펙의 중첩(`attendance/{sid}/records/{date}`) 대신 **최상위 `attendance/{studentId}_{date}`** 채택.
+  `teacherCode`·`parentUid`·`date`를 비정규화 → 반 전체/주간 조회를 단순 쿼리로 처리(collectionGroup·복잡한 규칙 회피).
+
+### 구조 (신규)
+```
+lib/
+  core/util/time_format.dart              # 오후 3:02 / 총 2시간30분 포맷
+  models/attendance_record.dart           # attendance 문서 매핑 + 상태
+  features/attendance/
+    data/attendance_repository.dart        # 학생·오늘기록 스트림, 등하원 체크, 주간 조회
+    state/attendance_providers.dart        # 선생님/학부모용 Riverpod provider
+    attendance_screen.dart                 # 더미 → 실데이터로 교체
+  features/home/parent_home_screen.dart    # 라이브 상태 카드 + 주간 통계
+```
+
+### 기능
+- **선생님 출석 화면**: 내 코드 소속 학생 + 오늘 기록 실시간 표시. 학생 버튼 한 번으로 **등원→하원** 체크(시각 자동 기록). 필터 칩(전체/등원/미등원 인원수).
+- **학부모 홈**: 라이브 상태 카드("지금 학원에 있어요" 배지 + 등원 시각/경과, 하원 시 총 체류 시간), 주간 통계 2칸(이번 주 출석 횟수 / 평균 등원 시각).
+- **실시간**: 선생님이 등원 체크 → 학부모 화면 즉시 반영.
+
+### Firestore 변경
+- attendance 규칙: 최상위 컬렉션 기준으로 재작성(학부모=자녀만 read, 선생님만 write·본인 코드로만)
+- 복합 인덱스 2개 배포: `(teacherCode, date)`, `(parentUid, date)`
+
+### attendance 문서 필드
+`studentId, teacherCode, parentUid, date(yyyy-MM-dd), checkInAt, checkOutAt, status, updatedAt`
 
 ---
 
-_마지막 업데이트: Phase 2 코드 완료 시점_
+## 열어둔 구조 / 다음
+- 선생님이 외부 앱으로 초대 링크 전송 — 구조만 열어둠
+- 선생님 "학생 추가/관리" 화면 (현재는 학부모 자가등록으로 학생 생성)
+- FCM 토큰 저장 필드는 있으나 실제 푸시는 Phase 6
+- **Phase 4**: 출결 달력 (학부모/선생님) — 이제 attendance 실데이터를 시각화
+
+---
+
+_마지막 업데이트: Phase 3 완료 시점_

@@ -61,16 +61,17 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ── attendance/{studentId}/records/{date} ────────────
-    // 학생 문서의 소유 관계를 따라 접근 통제.
-    match /attendance/{studentId}/records/{date} {
-      function student() {
-        return get(/databases/$(database)/documents/students/$(studentId)).data;
-      }
-      allow read: if (isParent() && student().parentUid == request.auth.uid)
-                  || ownsCode(student().teacherCode);
-      // 등원/하원 체크는 선생님만 기록.
-      allow write: if ownsCode(student().teacherCode);
+    // ── attendance/{studentId}_{date} (최상위) ───────────
+    // 문서에 비정규화된 teacherCode·parentUid로 접근 통제.
+    match /attendance/{recordId} {
+      allow read: if (isParent() && resource.data.parentUid == request.auth.uid)
+                  || ownsCode(resource.data.teacherCode);
+      // 등원/하원 체크는 선생님만. 생성 시 본인 코드로만.
+      allow create: if ownsCode(request.resource.data.teacherCode);
+      // 수정 시 소속 코드 불변.
+      allow update: if ownsCode(resource.data.teacherCode)
+                    && request.resource.data.teacherCode == resource.data.teacherCode;
+      allow delete: if false;
     }
 
     // ── chats/{chatId}/messages/{messageId} ──────────────
