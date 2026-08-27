@@ -15,7 +15,7 @@
 
 - Flutter 3.44.9 / Dart 3.12.2
 - Firebase: Auth(이메일 로그인), Cloud Firestore
-  - ⚠️ FCM(Cloud Messaging)은 아직 미도입 (pubspec에 `firebase_messaging` 없음) — Phase 6 예정
+  - FCM(Cloud Messaging) 푸시는 사용하지 않음 (요청). `firebase_messaging` 미설치, 관련 기능 만들지 않는다.
 - 상태관리: Riverpod (flutter_riverpod, `Notifier`/`StreamProvider`/`Provider.family`)
 - 달력: table_calendar
 - Firebase 프로젝트: `jigeum-yeogi-25737` (리전 asia-northeast3 서울)
@@ -85,3 +85,4 @@ firebase deploy --only firestore:indexes  # 인덱스 배포
 - 선생님 코드는 불변이다. 코드를 재생성하거나 변경하는 기능은 만들지 않는다.
 - 작업 전에 관련 feature 폴더를 먼저 읽고 기존 패턴을 따른다. 큰 구조 변경은 계획을 먼저 제시하고 확인받은 뒤 진행한다.
 - 채팅 기능은 요청으로 제거됨 — 다시 추가하지 않는다.
+- FCM 푸시 알림은 사용하지 않음 — 관련 기능·패키지를 추가하지 않는다.
