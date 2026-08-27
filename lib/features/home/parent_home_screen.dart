@@ -6,6 +6,7 @@ import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
+import 'package:jigeum_yeogi/models/schedule_entry.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 
 /// 학부모 홈 — 내 아이 라이브 상태 카드 + 주간 요약.
@@ -32,7 +33,7 @@ class ParentHomeScreen extends ConsumerWidget {
               const SizedBox(height: AppSpace.lg),
               _LiveCard(child: child, record: record),
               const SizedBox(height: AppSpace.md),
-              _StatsRow(records: week),
+              _WeeklyRecords(child: child, records: week),
             ],
           ),
         ),
@@ -145,41 +146,19 @@ class _LiveCard extends StatelessWidget {
   }
 }
 
-/// 주간 요약 통계 2칸.
-class _StatsRow extends StatelessWidget {
+/// 주간 출석 기록 — 이번 주 출석 횟수 + 요일·날짜·등하원 시간·정규/보충.
+class _WeeklyRecords extends StatelessWidget {
+  final Student? child;
   final List<AttendanceRecord> records;
-  const _StatsRow({required this.records});
+  const _WeeklyRecords({required this.child, required this.records});
 
   @override
   Widget build(BuildContext context) {
-    final present = records.where((r) => r.isCheckedIn).toList();
-    final count = present.length;
+    final present = records.where((r) => r.isCheckedIn).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
 
-    String avg = '-';
-    if (present.isNotEmpty) {
-      final avgMin = present
-              .map((r) => r.checkInAt!.toLocal())
-              .map((t) => t.hour * 60 + t.minute)
-              .reduce((a, b) => a + b) ~/
-          present.length;
-      final h = avgMin ~/ 60;
-      final m = avgMin % 60;
-      final ampm = h < 12 ? '오전' : '오후';
-      final h12 = h % 12 == 0 ? 12 : h % 12;
-      avg = '$ampm $h12:${m.toString().padLeft(2, '0')}';
-    }
-
-    return Row(
-      children: [
-        Expanded(child: _stat('이번 주 출석', '$count회')),
-        const SizedBox(width: AppSpace.md),
-        Expanded(child: _stat('평균 등원 시각', avg)),
-      ],
-    );
-  }
-
-  Widget _stat(String label, String value) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(AppSpace.md),
       decoration: BoxDecoration(
         color: AppColors.card,
@@ -189,11 +168,61 @@ class _StatsRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: AppText.caption),
-          const SizedBox(height: AppSpace.xs),
-          Text(value, style: AppText.screenTitle.copyWith(fontSize: 20)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('이번 주 출석', style: AppText.caption),
+              Text('${present.length}회',
+                  style: AppText.cardTitle
+                      .copyWith(color: AppColors.primaryDeep)),
+            ],
+          ),
+          if (present.isEmpty) ...[
+            const SizedBox(height: AppSpace.sm),
+            const Text('이번 주 출석 기록이 없어요.', style: AppText.caption),
+          ] else
+            for (final r in present) ...[
+              const Divider(height: AppSpace.lg, color: AppColors.cardBorder),
+              _recordRow(r),
+            ],
         ],
       ),
+    );
+  }
+
+  Widget _recordRow(AttendanceRecord r) {
+    final date = DateTime.parse(r.date);
+    final dow = weekdayLabelOf(date);
+    final md = '${date.month}/${date.day}';
+    final inT = formatKoreanTime(r.checkInAt!);
+    final outT =
+        r.checkOutAt != null ? formatKoreanTime(r.checkOutAt!) : '수업 중';
+    final isMakeup =
+        (child?.typeOn(weekdayCodeOf(date)) ?? ClassType.regular) ==
+            ClassType.makeup;
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 56,
+          child: Text('$dow $md', style: AppText.body),
+        ),
+        Expanded(
+          child: Text('$inT → $outT', style: AppText.caption),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: isMakeup ? AppColors.chipNeutral : AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: Text(
+            isMakeup ? '보충' : '정규',
+            style: AppText.caption.copyWith(
+                color: isMakeup ? AppColors.textSub : AppColors.primaryDeep),
+          ),
+        ),
+      ],
     );
   }
 }

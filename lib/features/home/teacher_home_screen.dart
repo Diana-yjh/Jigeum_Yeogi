@@ -24,6 +24,7 @@ class TeacherHomeScreen extends ConsumerWidget {
     final checkedIn = scheduled
         .where((s) => recById[s.id]?.isCheckedIn == true)
         .length;
+    final todayKey = ref.watch(todayKeyProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -63,6 +64,8 @@ class TeacherHomeScreen extends ConsumerWidget {
                             scheduledTime: s.timeOn(todayCode),
                             isMakeup: s.typeOn(todayCode) == ClassType.makeup,
                             record: recById[s.id],
+                            onReset: () =>
+                                _confirmReset(context, ref, s.id, todayKey),
                           );
                         },
                       ),
@@ -72,6 +75,32 @@ class TeacherHomeScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// 하원 완료 학생 탭 시 기록 초기화 확인.
+  Future<void> _confirmReset(
+      BuildContext context, WidgetRef ref, String studentId, String date) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('기록 초기화'),
+        content: const Text('기록을 초기화 하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primaryDeep),
+            child: const Text('초기화'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await ref.read(attendanceRepositoryProvider).resetRecord(studentId, date);
+    }
   }
 }
 
@@ -119,11 +148,13 @@ class _ScheduledRow extends StatelessWidget {
   final String? scheduledTime; // 오늘 등원 예정 시각("HH:mm")
   final bool isMakeup;
   final AttendanceRecord? record;
+  final VoidCallback onReset;
   const _ScheduledRow({
     required this.name,
     required this.scheduledTime,
     required this.isMakeup,
     required this.record,
+    required this.onReset,
   });
 
   @override
@@ -149,7 +180,14 @@ class _ScheduledRow extends StatelessWidget {
         ? formatHhmm(scheduledTime!)
         : '시간 미정';
 
-    return Container(
+    return Material(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        // 하원 완료 상태에서만 탭 → 기록 초기화.
+        onTap: done ? onReset : null,
+        child: Container(
       padding: const EdgeInsets.all(AppSpace.md),
       decoration: BoxDecoration(
         color: AppColors.card,
@@ -193,7 +231,13 @@ class _ScheduledRow extends StatelessWidget {
             ),
           ),
           Text(status, style: AppText.caption.copyWith(color: color)),
+          if (done) ...[
+            const SizedBox(width: 6),
+            const Icon(Icons.refresh, size: 16, color: AppColors.textFaint),
+          ],
         ],
+      ),
+        ),
       ),
     );
   }

@@ -54,6 +54,17 @@ class AttendanceRepository {
     }, SetOptions(merge: true));
   }
 
+  /// 출석 기록 초기화 — 등원/하원 시각을 비우고 등원 전(pending)으로.
+  /// (보안 규칙상 문서 삭제 금지라 필드를 비우는 방식.)
+  Future<void> resetRecord(String studentId, String date) {
+    return _attendance.doc(_docId(studentId, date)).set({
+      'checkInAt': null,
+      'checkOutAt': null,
+      'status': 'pending',
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
   /// 선생님 반의 임의 구간(달력 월 등) 출석 기록.
   Stream<List<AttendanceRecord>> teacherRecordsBetween(
       String teacherCode, String startDate, String endDate) {
