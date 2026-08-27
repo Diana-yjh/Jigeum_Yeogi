@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
+import 'package:jigeum_yeogi/core/theme/app_decorations.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
@@ -40,23 +41,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
               const SizedBox(height: AppSpace.md),
               _TodaySummary(count: todayScheduled.length),
               const SizedBox(height: AppSpace.md),
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 0, label: Text('학생별 설정')),
-                  ButtonSegment(value: 1, label: Text('월간 보기')),
-                ],
-                selected: {_mode},
-                onSelectionChanged: (s) => setState(() => _mode = s.first),
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.resolveWith((states) =>
-                      states.contains(WidgetState.selected)
-                          ? AppColors.primary
-                          : AppColors.card),
-                  foregroundColor: WidgetStateProperty.resolveWith((states) =>
-                      states.contains(WidgetState.selected)
-                          ? Colors.white
-                          : AppColors.textSub),
-                ),
+              _SegmentToggle(
+                labels: const ['학생별 설정', '월간 보기'],
+                selected: _mode,
+                onChanged: (i) => setState(() => _mode = i),
               ),
               const SizedBox(height: AppSpace.md),
               Expanded(
@@ -85,6 +73,68 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 뉴트럴 트랙 위에 흰 pill이 움직이는 세그먼트 토글.
+class _SegmentToggle extends StatelessWidget {
+  final List<String> labels;
+  final int selected;
+  final ValueChanged<int> onChanged;
+  const _SegmentToggle({
+    required this.labels,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.chipNeutral,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < labels.length; i++)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: i == selected ? AppColors.card : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    boxShadow: i == selected
+                        ? const [
+                            BoxShadow(
+                              color: Color(0x14453121),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Text(
+                    labels[i],
+                    style: AppText.caption.copyWith(
+                      color: i == selected
+                          ? AppColors.primaryDeep
+                          : AppColors.textSub,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -145,7 +195,7 @@ class _StudentList extends StatelessWidget {
       itemBuilder: (_, i) {
         final s = students[i];
         return Material(
-          color: AppColors.card,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadius.card),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.card),
@@ -155,11 +205,7 @@ class _StudentList extends StatelessWidget {
             ),
             child: Container(
               padding: const EdgeInsets.all(AppSpace.md),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadius.card),
-                border:
-                    Border.all(color: AppColors.cardBorder, width: 0.5),
-              ),
+              decoration: AppDecoration.card(),
               child: Row(
                 children: [
                   CircleAvatar(
@@ -241,11 +287,7 @@ class _MonthlyViewState extends ConsumerState<_MonthlyView> {
         children: [
           Container(
             padding: const EdgeInsets.all(AppSpace.sm),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(AppRadius.card),
-              border: Border.all(color: AppColors.cardBorder, width: 0.5),
-            ),
+            decoration: AppDecoration.card(),
             child: TableCalendar<Object>(
               firstDay: DateTime(2024, 1, 1),
               lastDay: DateTime(DateTime.now().year + 1, 12, 31),
