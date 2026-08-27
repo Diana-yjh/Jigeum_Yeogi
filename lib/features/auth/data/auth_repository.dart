@@ -95,6 +95,7 @@ class AuthRepository {
         'teacherCode': code,
         'parentUid': uid,
         'classId': null,
+        'schedule': <String, String>{},
         'scheduledDays': <String>[],
         'createdAt': FieldValue.serverTimestamp(),
       });

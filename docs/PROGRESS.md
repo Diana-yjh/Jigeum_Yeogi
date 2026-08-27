@@ -222,6 +222,32 @@ lib/core/util/time_format.dart      # monthKey 추가
 
 ---
 
+## 추가 기능 — 선생님 스케줄 ✅ (요청)
+
+매주 반복 스케줄을 요일+시간으로 짜고, 오늘 등원 예정 아이를 자동 표시.
+
+### 결정
+- **매주 반복(요일 기반)** + **요일마다 다른 시간**(30분 단위).
+- 데이터: students 문서에 `schedule` 맵(`{ 'mon':'15:00', 'wed':'16:30' }`) + `scheduledDays`(키 배열, 호환용).
+
+### 구조 (신규)
+```
+lib/features/schedule/
+  data/schedule_repository.dart      # setSchedule(요일→시간 맵)
+  state/schedule_providers.dart      # 오늘/특정요일 등원 예정 학생(시간순)
+  schedule_screen.dart               # 주간 편집 + 월간 보기
+lib/core/util/time_format.dart       # 요일 코드/라벨, 30분 시간 슬롯, HH:mm→오후 3:00
+```
+
+### 기능
+- 선생님 하단 탭에 **스케줄** 추가 → 홈/출석/스케줄/설정.
+- **주간 편집**: 학생별 월~일 토글, 켠 요일마다 시간 드롭다운(08:00~22:00, 30분 단위) 즉시 저장.
+- **월간 보기**: 등원 예정 있는 날 표시, 날짜 탭 → 그 요일 명단(시간 포함, 시간순).
+- **선생님 홈**: placeholder → "오늘 등원 예정"(학생별 예정 시각) + 등원 현황 진행 바.
+- Student 모델을 schedule 맵 기반으로 변경(레거시 scheduledDays 파싱 호환).
+
+---
+
 ## Phase 5(채팅) — 제외 ❌ (요청으로 삭제)
 - 하단 탭에서 채팅 탭 제거 (선생님: 홈/출석/설정, 학부모: 홈/달력/설정)
 - `lib/features/chat/` 삭제, 학부모 홈의 채팅 미리보기 카드 제거
