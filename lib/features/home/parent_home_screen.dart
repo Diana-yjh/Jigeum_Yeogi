@@ -16,7 +16,31 @@ class ParentHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final child = ref.watch(childProvider).value;
+    final children = ref.watch(childrenProvider).value ?? const [];
+
+    // 자녀 2명 이상이면 아이별 상태 카드를 나열.
+    if (children.length >= 2) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpace.md, AppSpace.md, AppSpace.md, AppSpace.xl),
+            children: [
+              const _Header(name: '우리 아이들'),
+              const SizedBox(height: AppSpace.lg),
+              for (final c in children) ...[
+                _ChildStatusCard(child: c),
+                const SizedBox(height: AppSpace.md),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 단일 자녀(또는 없음) — 기존 히어로 + 주간 카드.
+    final child = children.isNotEmpty ? children.first : null;
     final today = ref.watch(childTodayRecordProvider).value;
     final week = ref.watch(childWeekRecordsProvider).value ?? const [];
 
@@ -34,6 +58,85 @@ class ParentHomeScreen extends ConsumerWidget {
             _WeekCard(child: child, week: week),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 아이별 오늘 상태 카드(자녀 여러 명일 때). 수업 중이면 오렌지, 아니면 흰 카드.
+class _ChildStatusCard extends ConsumerWidget {
+  final Student child;
+  const _ChildStatusCard({required this.child});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final record = ref.watch(studentTodayRecordProvider(child.id)).value;
+    final checkIn = record?.checkInAt;
+    final checkOut = record?.checkOutAt;
+    final hasIn = checkIn != null;
+    final hasOut = checkOut != null;
+    final inClass = hasIn && !hasOut;
+
+    final String pill;
+    final String subtitle;
+    if (hasOut) {
+      pill = '하원 완료';
+      subtitle =
+          '${clock(checkIn!)} 등원 → ${clock(checkOut)} 하원 · 총 ${formatDuration(checkOut.difference(checkIn))}';
+    } else if (hasIn) {
+      pill = '학원에 있어요';
+      subtitle = '${clock(checkIn)}부터 학원에 있어요';
+    } else {
+      pill = '등원 전';
+      subtitle = '아직 등원 전이에요';
+    }
+
+    final onColor = inClass ? Colors.white : AppColors.textMain;
+    final subColor = inClass ? Colors.white70 : AppColors.textSub;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpace.md),
+      decoration: inClass ? AppDecoration.hero() : AppDecoration.card(),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor:
+                inClass ? Colors.white24 : AppColors.primarySoft,
+            child: Text(child.name.characters.first,
+                style: AppText.cardTitle.copyWith(
+                    color: inClass ? Colors.white : AppColors.primaryDeep)),
+          ),
+          const SizedBox(width: AppSpace.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(child.name,
+                        style: AppText.cardTitle.copyWith(color: onColor)),
+                    const SizedBox(width: AppSpace.sm),
+                    inClass
+                        ? StatusPill.onHero(pill)
+                        : StatusPill(
+                            label: pill,
+                            background: hasOut
+                                ? AppColors.chipNeutral
+                                : AppColors.primarySoft,
+                            foreground: hasOut
+                                ? AppColors.textSub
+                                : AppColors.primaryDeep,
+                          ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(subtitle,
+                    style: AppText.caption.copyWith(color: subColor)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

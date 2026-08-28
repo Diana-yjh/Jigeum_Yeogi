@@ -47,6 +47,15 @@ final childrenProvider = StreamProvider<List<Student>>((ref) {
   return ref.watch(attendanceRepositoryProvider).childrenOf(uid);
 });
 
+/// 특정 학생의 오늘 출석 기록(자녀 여러 명 지원).
+final studentTodayRecordProvider =
+    StreamProvider.family<AttendanceRecord?, String>((ref, studentId) {
+  final today = ref.watch(todayKeyProvider);
+  return ref
+      .watch(attendanceRepositoryProvider)
+      .studentDayRecord(studentId, today);
+});
+
 /// 내 아이의 오늘 출석 기록.
 final childTodayRecordProvider = StreamProvider<AttendanceRecord?>((ref) {
   final child = ref.watch(childProvider).value;
