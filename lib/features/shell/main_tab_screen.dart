@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:jigeum_yeogi/features/notifications/notification_service.dart';
 import 'package:jigeum_yeogi/models/user_role.dart';
 import 'package:jigeum_yeogi/features/home/teacher_home_screen.dart';
 import 'package:jigeum_yeogi/features/home/parent_home_screen.dart';
@@ -21,6 +23,23 @@ class MainTabScreen extends ConsumerStatefulWidget {
 
 class _MainTabScreenState extends ConsumerState<MainTabScreen> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // 로그인 셸 진입 시 알림 권한 요청 + 토큰 저장.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(notificationServiceProvider).registerForCurrentUser();
+    });
+    // 앱이 열려 있을 때(포그라운드) 수신 → 인앱 스낵바.
+    FirebaseMessaging.onMessage.listen((message) {
+      final n = message.notification;
+      if (n == null || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${n.title ?? ''} ${n.body ?? ''}'.trim())),
+      );
+    });
+  }
 
   /// 역할에 따라 탭 구성을 반환한다.
   List<_TabItem> get _tabs {
