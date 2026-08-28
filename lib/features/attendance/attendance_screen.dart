@@ -139,15 +139,41 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       );
     }
 
+    final todayCode = weekdayCodeOf(DateTime.now());
+
     // 학생 + 오늘 기록 → 표시 상태.
     final rows = students.map((s) {
       final rec = byId[s.id];
       final state = _stateOf(rec);
-      return (student: s, state: state, record: rec);
+      final scheduled = s.schedule.containsKey(todayCode);
+      return (student: s, state: state, record: rec, scheduled: scheduled);
     }).toList();
 
-    final presentCount = rows.where((r) => _isPresent(r.state)).length;
-    final visible = rows.where((r) => _matches(r.state)).toList();
+    // 오늘 예정이거나 오늘 활동(등원/하원/결석예정)이 있으면 정규 목록,
+    // 예정도 활동도 없으면 회색 처리.
+    final todayRows =
+        rows.where((r) => r.scheduled || r.state != CheckState.pending).toList();
+    final otherRows =
+        rows.where((r) => !r.scheduled && r.state == CheckState.pending).toList();
+
+    final presentCount = todayRows.where((r) => _isPresent(r.state)).length;
+    final visibleToday = todayRows.where((r) => _matches(r.state)).toList();
+
+    // 리스트 아이템(정규 → (전체 필터일 때) 오늘 예정 아님 그룹).
+    final items = <Widget>[];
+    for (final row in visibleToday) {
+      items.add(_card(row, dimmed: false));
+    }
+    final showOthers = _type == AttendanceTypes.all && otherRows.isNotEmpty;
+    if (showOthers) {
+      items.add(const Padding(
+        padding: EdgeInsets.only(top: AppSpace.sm, bottom: AppSpace.xs),
+        child: Text('오늘 예정 아님', style: AppText.caption),
+      ));
+      for (final row in otherRows) {
+        items.add(_card(row, dimmed: true));
+      }
+    }
 
     return Expanded(
       child: Column(
@@ -155,36 +181,47 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         children: [
           AttendanceFilter(
             selected: _type,
-            allCount: rows.length,
+            allCount: todayRows.length,
             presentCount: presentCount,
-            absentCount: rows.length - presentCount,
+            absentCount: todayRows.length - presentCount,
             onChanged: (t) => setState(() => _type = t),
           ),
           const SizedBox(height: AppSpace.lg),
           Expanded(
-            child: ListView.separated(
-              itemCount: visible.length,
-              separatorBuilder: (_, _) => const SizedBox(height: AppSpace.sm),
-              itemBuilder: (_, i) {
-                final row = visible[i];
-                return StudentCard(
-                  student: AttendanceStudent(
-                    name: row.student.name,
-                    state: row.state,
-                    checkInAt: row.record?.checkInAt != null
-                        ? formatKoreanTime(row.record!.checkInAt!)
-                        : null,
-                    checkOutAt: row.record?.checkOutAt != null
-                        ? formatKoreanTime(row.record!.checkOutAt!)
-                        : null,
+            child: items.isEmpty
+                ? const Center(
+                    child: Text('오늘 출석 예정인 학생이 없어요.',
+                        style: AppText.caption))
+                : ListView.separated(
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpace.sm),
+                    itemBuilder: (_, i) => items[i],
                   ),
-                  onTapAction: () => _onTap(row.student, row.state),
-                );
-              },
-            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _card(
+    ({Student student, CheckState state, AttendanceRecord? record, bool scheduled})
+        row, {
+    required bool dimmed,
+  }) {
+    return StudentCard(
+      dimmed: dimmed,
+      student: AttendanceStudent(
+        name: row.student.name,
+        state: row.state,
+        checkInAt: row.record?.checkInAt != null
+            ? formatKoreanTime(row.record!.checkInAt!)
+            : null,
+        checkOutAt: row.record?.checkOutAt != null
+            ? formatKoreanTime(row.record!.checkOutAt!)
+            : null,
+      ),
+      onTapAction: () => _onTap(row.student, row.state),
     );
   }
 }

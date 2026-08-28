@@ -12,25 +12,37 @@ class StudentCard extends StatelessWidget {
   final AttendanceStudent student;
   final VoidCallback? onTapAction;
 
+  /// 오늘 출석 예정이 아닌 학생 → 회색 처리.
+  final bool dimmed;
+
   const StudentCard({
     super.key,
     required this.student,
     this.onTapAction,
+    this.dimmed = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final nameColor = dimmed ? AppColors.textFaint : AppColors.textMain;
     return Container(
       padding: const EdgeInsets.all(AppSpace.md),
-      decoration: AppDecoration.card(),
+      decoration: dimmed
+          ? BoxDecoration(
+              color: AppColors.chipNeutral,
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            )
+          : AppDecoration.card(),
       child: Row(
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: AppColors.primarySoft,
+            backgroundColor:
+                dimmed ? AppColors.cardBorder : AppColors.primarySoft,
             child: Text(
               student.name.characters.first,
-              style: AppText.cardTitle.copyWith(color: AppColors.primaryDeep),
+              style: AppText.cardTitle.copyWith(
+                  color: dimmed ? AppColors.textFaint : AppColors.primaryDeep),
             ),
           ),
           const SizedBox(width: AppSpace.md),
@@ -38,9 +50,11 @@ class StudentCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(student.name, style: AppText.cardTitle),
+                Text(student.name,
+                    style: AppText.cardTitle.copyWith(color: nameColor)),
                 const SizedBox(height: 2),
-                Text(_subtitle(), style: AppText.caption),
+                Text(dimmed ? '오늘 예정 아님' : _subtitle(),
+                    style: AppText.caption),
               ],
             ),
           ),
@@ -66,11 +80,14 @@ class StudentCard extends StatelessWidget {
   Widget _actionButton() {
     switch (student.state) {
       case CheckState.pending:
+        // 오늘 예정이 아니면 등원 버튼 비활성화.
         return OutlinedButton(
-          onPressed: onTapAction,
+          onPressed: dimmed ? null : onTapAction,
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primaryDeep,
-            side: const BorderSide(color: AppColors.primary),
+            disabledForegroundColor: AppColors.textFaint,
+            side: BorderSide(
+                color: dimmed ? AppColors.cardBorder : AppColors.primary),
             shape: const StadiumBorder(),
           ),
           child: const Text('등원'),
