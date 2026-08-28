@@ -359,6 +359,8 @@ class _MonthlyViewState extends ConsumerState<_MonthlyView> {
               focusedDay: _focused,
               rowHeight: 64, // 날짜+인원수 두 줄 여유(글씨 확대 대응)
               daysOfWeekHeight: 24,
+              // 세로 스와이프는 페이지 스크롤에 양보(가로만 월 이동).
+              availableGestures: AvailableGestures.horizontalSwipe,
               selectedDayPredicate: (d) => isSameDay(d, _selected),
               onDaySelected: (selected, focused) {
                 setState(() => _focused = focused);

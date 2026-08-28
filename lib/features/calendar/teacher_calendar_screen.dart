@@ -85,6 +85,7 @@ class _TeacherCalendarScreenState extends ConsumerState<TeacherCalendarScreen> {
         focusedDay: _focused,
         rowHeight: 56, // 글씨 확대 대응(오버플로 방지)
         daysOfWeekHeight: 24,
+        availableGestures: AvailableGestures.horizontalSwipe,
         selectedDayPredicate: (d) => isSameDay(d, _selected),
         onDaySelected: (selected, focused) => setState(() {
           _selected = selected;
