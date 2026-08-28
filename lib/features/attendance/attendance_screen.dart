@@ -59,6 +59,27 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       if (state == CheckState.pending) {
         await repo.checkIn(student, today);
       } else if (state == CheckState.checkedIn) {
+        // 하원은 한 번 더 확인.
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('하원 확인'),
+            content: Text('${student.name} 학생을 하원 처리할까요?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primaryDeep),
+                child: const Text('하원'),
+              ),
+            ],
+          ),
+        );
+        if (ok != true) return;
         await repo.checkOut(student, today);
       }
     } catch (_) {
