@@ -21,6 +21,8 @@ abstract class AppColors {
   static const cardBorder = Color(0xFFEFE9DF); // 매우 옅은 헤어라인
   static const chipNeutral = Color(0xFFF1ECE3);
 
+  static const danger = Color(0xFFC85C4E); // 파괴적 액션(회원탈퇴 등)
+
   /// 히어로 카드용 코랄 그라디언트.
   static const primaryGradient = LinearGradient(
     begin: Alignment.topLeft,

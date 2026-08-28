@@ -29,10 +29,12 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.uid == uid;
       allow create: if isSignedIn() && request.auth.uid == uid;
       allow update: if isSignedIn() && request.auth.uid == uid
-                    // 역할·코드는 변경 불가
+                    // 역할은 변경 불가.
                     && request.resource.data.role == resource.data.role
-                    && request.resource.data.get('teacherCode', null)
-                       == resource.data.get('teacherCode', null);
+                    // 선생님 코드는 불변, 학부모 코드는 변경 가능(반 전환).
+                    && (resource.data.role != 'teacher'
+                        || request.resource.data.get('teacherCode', null)
+                           == resource.data.get('teacherCode', null));
       allow delete: if false;
     }
 
@@ -58,7 +60,9 @@ service cloud.firestore {
                     && exists(/databases/$(database)/documents/teachers/$(request.resource.data.teacherCode));
       // 선생님은 자기 코드 소속 학생 정보 수정 가능.
       allow update: if ownsCode(resource.data.teacherCode);
-      allow delete: if false;
+      // 학부모는 본인 자녀, 선생님은 자기 코드 소속 학생을 삭제 가능.
+      allow delete: if (isParent() && resource.data.parentUid == request.auth.uid)
+                    || ownsCode(resource.data.teacherCode);
     }
 
     // ── attendance/{studentId}_{date} (최상위) ───────────

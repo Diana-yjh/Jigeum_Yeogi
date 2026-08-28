@@ -85,6 +85,14 @@ class AttendanceRepository {
         .map((s) => s.docs.isEmpty ? null : Student.fromDoc(s.docs.first));
   }
 
+  /// 학부모의 모든 자녀.
+  Stream<List<Student>> childrenOf(String parentUid) {
+    return _students
+        .where('parentUid', isEqualTo: parentUid)
+        .snapshots()
+        .map((s) => s.docs.map(Student.fromDoc).toList());
+  }
+
   Stream<AttendanceRecord?> studentDayRecord(String studentId, String date) {
     return _attendance.doc(_docId(studentId, date)).snapshots().map(
         (d) => d.exists ? AttendanceRecord.fromDoc(d) : null);

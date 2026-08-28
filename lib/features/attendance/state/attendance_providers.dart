@@ -40,6 +40,13 @@ final childProvider = StreamProvider<Student?>((ref) {
   return ref.watch(attendanceRepositoryProvider).childOf(uid);
 });
 
+/// 내 아이 전체.
+final childrenProvider = StreamProvider<List<Student>>((ref) {
+  final uid = ref.watch(appUserProvider).value?.uid;
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(attendanceRepositoryProvider).childrenOf(uid);
+});
+
 /// 내 아이의 오늘 출석 기록.
 final childTodayRecordProvider = StreamProvider<AttendanceRecord?>((ref) {
   final child = ref.watch(childProvider).value;

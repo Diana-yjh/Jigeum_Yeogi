@@ -41,6 +41,67 @@ class AuthRepository {
     return _db.collection('users').doc(uid).set(fields, SetOptions(merge: true));
   }
 
+  /// 로그인한 학부모가 자녀를 추가(코드 검증 후 students 생성).
+  Future<void> addChild({
+    required String parentUid,
+    required String teacherCode,
+    required String childName,
+  }) async {
+    final code = teacherCode.trim();
+    final teacherDoc = await _db.collection('teachers').doc(code).get();
+    if (!teacherDoc.exists) {
+      throw const AuthFailure('선생님 코드를 찾을 수 없어요. 코드를 다시 확인해주세요.');
+    }
+    await _db.collection('students').add({
+      'name': childName.trim(),
+      'teacherCode': code,
+      'parentUid': parentUid,
+      'classId': null,
+      'schedule': <String, dynamic>{},
+      'scheduledDays': <String>[],
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// 자녀(학생) 삭제. 출결 기록은 Cloud Functions(onStudentDelete)가 정리.
+  Future<void> deleteChild(String studentId) {
+    return _db.collection('students').doc(studentId).delete();
+  }
+
+  /// 학부모의 선생님 코드 변경. 기존 자녀는 모두 삭제(다른 반으로 전환).
+  Future<void> changeParentTeacherCode({
+    required String uid,
+    required String newCode,
+    required List<String> childIds,
+  }) async {
+    final code = newCode.trim();
+    final teacherDoc = await _db.collection('teachers').doc(code).get();
+    if (!teacherDoc.exists) {
+      throw const AuthFailure('선생님 코드를 찾을 수 없어요. 코드를 다시 확인해주세요.');
+    }
+    final batch = _db.batch();
+    for (final id in childIds) {
+      batch.delete(_db.collection('students').doc(id));
+    }
+    batch.set(_db.collection('users').doc(uid), {'teacherCode': code},
+        SetOptions(merge: true));
+    await batch.commit();
+  }
+
+  /// 회원탈퇴 — Auth 계정 삭제. Firestore 데이터는 Cloud Functions가 정리.
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        throw const AuthFailure('보안을 위해 다시 로그인한 뒤 탈퇴해주세요.');
+      }
+      throw AuthFailure(_authMessage(e));
+    }
+  }
+
   /// 선생님 회원가입. 성공 시 발급된 6자리 코드를 반환.
   Future<String> signUpTeacher({
     required String name,
@@ -92,6 +153,7 @@ class AuthRepository {
         'role': 'parent',
         'name': name.trim(),
         'email': email.trim(),
+        'teacherCode': code, // 학부모가 연결된 선생님 코드(유지·수정용)
         'createdAt': FieldValue.serverTimestamp(),
       });
       final studentRef = _db.collection('students').doc();
