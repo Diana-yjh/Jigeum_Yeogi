@@ -157,11 +157,21 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         rows.where((r) => !r.scheduled && r.state == CheckState.pending).toList();
 
     final presentCount = todayRows.where((r) => _isPresent(r.state)).length;
-    final visibleToday = todayRows.where((r) => _matches(r.state)).toList();
+    final visibleToday = todayRows.where((r) => _matches(r.state)).toList()
+      ..sort((a, b) => _timeKey(a, todayCode).compareTo(_timeKey(b, todayCode)));
 
-    // 리스트 아이템(정규 → (전체 필터일 때) 오늘 예정 아님 그룹).
+    // 리스트 아이템: 1시간 단위 시간대 그룹 헤더 + 학생 카드.
     final items = <Widget>[];
+    int? curHour;
+    var started = false;
     for (final row in visibleToday) {
+      final h = _hourOf(row, todayCode);
+      if (!started || h != curHour) {
+        started = true;
+        curHour = h;
+        final count = visibleToday.where((r) => _hourOf(r, todayCode) == h).length;
+        items.add(_groupHeader(_hourLabel(h), count));
+      }
       items.add(_card(row, dimmed: false));
     }
     final showOthers = _type == AttendanceTypes.all && otherRows.isNotEmpty;
@@ -190,7 +200,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           Expanded(
             child: items.isEmpty
                 ? const Center(
-                    child: Text('오늘 출석 예정인 학생이 없어요.',
+                    child: Text('오늘 출석한 학생이 아직 없어요.',
                         style: AppText.caption))
                 : ListView.separated(
                     itemCount: items.length,
@@ -199,6 +209,48 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                     itemBuilder: (_, i) => items[i],
                   ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// 오늘 요일 등원 예정 시각의 '시'(없으면 null → 시간 미정).
+  int? _hourOf(
+      ({Student student, CheckState state, AttendanceRecord? record, bool scheduled})
+          row,
+      String todayCode) {
+    final t = row.student.timeOn(todayCode);
+    if (t == null || t.isEmpty) return null;
+    return int.tryParse(t.split(':').first);
+  }
+
+  /// 정렬 키(시간 없으면 맨 뒤).
+  String _timeKey(
+      ({Student student, CheckState state, AttendanceRecord? record, bool scheduled})
+          row,
+      String todayCode) {
+    final t = row.student.timeOn(todayCode);
+    return (t == null || t.isEmpty) ? '99:99' : t;
+  }
+
+  /// 1시간 단위 그룹 라벨. 예: "오후 3시".
+  String _hourLabel(int? hour) {
+    if (hour == null) return '시간 미정';
+    final ampm = hour < 12 ? '오전' : '오후';
+    final h12 = hour % 12 == 0 ? 12 : hour % 12;
+    return '$ampm $h12시';
+  }
+
+  Widget _groupHeader(String label, int count) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpace.sm, bottom: AppSpace.xs),
+      child: Row(
+        children: [
+          Text(label,
+              style: AppText.caption.copyWith(
+                  color: AppColors.primaryDeep, fontWeight: FontWeight.w700)),
+          const SizedBox(width: AppSpace.sm),
+          Text('$count명', style: AppText.caption),
         ],
       ),
     );
