@@ -33,11 +33,9 @@ String formatHhmm(String hhmm) {
   return '$ampm $h12:${m.toString().padLeft(2, '0')}';
 }
 
-/// DateTime → "14:30" 24시간 형식(로컬).
-String clock(DateTime t) {
-  final l = t.toLocal();
-  return '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}';
-}
+/// DateTime → "오후 2:30" (로컬). 앱 전역 시각 표기 — [formatKoreanTime]과 동일.
+/// 예전엔 24시간 "14:30"이었으나 학부모가 읽기 쉬운 오전/오후로 통일했다.
+String clock(DateTime t) => formatKoreanTime(t);
 
 /// DateTime → "오후 3:02" 형식(로컬 시각).
 String formatKoreanTime(DateTime t) {

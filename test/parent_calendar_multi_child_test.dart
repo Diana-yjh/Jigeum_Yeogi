@@ -89,10 +89,10 @@ void main() {
     expect(_dots(tester, AppColors.childColor(1), 4), 1);
 
     // 상세 카드에 두 아이 시각이 모두 보인다 — 한 아이가 다른 아이를 덮어쓰지 않는다.
-    expect(find.text('15:02'), findsOneWidget);
-    expect(find.text('16:45'), findsOneWidget);
-    expect(find.text('17:02'), findsOneWidget);
-    expect(find.text('18:45'), findsOneWidget);
+    expect(find.text('오후 3:02'), findsOneWidget);
+    expect(find.text('오후 4:45'), findsOneWidget);
+    expect(find.text('오후 5:02'), findsOneWidget);
+    expect(find.text('오후 6:45'), findsOneWidget);
 
     // 요약: 아이별 횟수 → '회' 단위가 아이 수만큼.
     expect(find.text('회'), findsNWidgets(2));
@@ -117,7 +117,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('김테스트'), findsNothing); // 범례·이름 없음
-    expect(find.text('15:02'), findsOneWidget);
+    expect(find.text('오후 3:02'), findsOneWidget);
     expect(find.text('정규'), findsOneWidget); // 날짜 옆 pill
   });
 }

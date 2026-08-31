@@ -99,7 +99,7 @@ void main() {
     expect(find.text('김테스트'), findsOneWidget);
     expect(find.text('박테스트'), findsNothing); // 한 번에 한 명씩
     expect(find.text('지금 학원에 있어요'), findsOneWidget);
-    expect(find.text('15:02'), findsOneWidget); // 등원 시각
+    expect(find.text('오후 3:02'), findsOneWidget); // 등원 시각
     expect(find.text('--:--'), findsOneWidget); // 아직 하원 전
     expect(find.text('이번 주 출석'), findsOneWidget);
     expect(find.text('2 / 3회'), findsOneWidget);
@@ -114,8 +114,8 @@ void main() {
     expect(find.text('박테스트'), findsOneWidget);
     expect(find.text('김테스트'), findsNothing);
     expect(find.text('집에 잘 갔어요'), findsOneWidget);
-    expect(find.text('15:10'), findsOneWidget); // 등원
-    expect(find.text('17:30'), findsOneWidget); // 하원
+    expect(find.text('오후 3:10'), findsOneWidget); // 등원
+    expect(find.text('오후 5:30'), findsOneWidget); // 하원
     expect(find.text('이번 주 출석'), findsOneWidget);
     // 주간 횟수는 아이별로 갈린다(형제 것이 합산되지 않는다).
     expect(find.text('1 / 3회'), findsOneWidget);
