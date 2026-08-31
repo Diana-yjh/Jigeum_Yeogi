@@ -514,18 +514,27 @@ class _TeacherSettings extends ConsumerWidget {
     final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: AppText.caption),
-          Row(
-            children: [
-              Text(value, style: AppText.body),
-              if (onEdit != null) ...[
-                const SizedBox(width: AppSpace.sm),
-                const Icon(Icons.edit_outlined,
-                    size: 18, color: AppColors.textFaint),
+          const SizedBox(width: AppSpace.md),
+          // 값은 남는 폭 안에서 오른쪽 정렬 — 긴 이메일·큰 글씨에서 넘치지 않게.
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: Text(value,
+                      style: AppText.body,
+                      textAlign: TextAlign.end,
+                      overflow: TextOverflow.ellipsis),
+                ),
+                if (onEdit != null) ...[
+                  const SizedBox(width: AppSpace.sm),
+                  const Icon(Icons.edit_outlined,
+                      size: 18, color: AppColors.textFaint),
+                ],
               ],
-            ],
+            ),
           ),
         ],
       ),
