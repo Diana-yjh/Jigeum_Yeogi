@@ -6,6 +6,8 @@ import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
+import 'package:jigeum_yeogi/features/notifications/notification_list_screen.dart';
+import 'package:jigeum_yeogi/features/notifications/state/notification_providers.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 import 'package:jigeum_yeogi/shared/widgets/status_pill.dart';
@@ -142,13 +144,13 @@ class _ChildStatusCard extends ConsumerWidget {
   }
 }
 
-/// 헤더 — 아바타 + 이름/날짜 + 종 버튼.
-class _Header extends StatelessWidget {
+/// 헤더 — 아바타 + 이름/날짜 + 알림 버튼.
+class _Header extends ConsumerWidget {
   final String name;
   const _Header({required this.name});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final now = DateTime.now();
     final dateText = '${now.month}월 ${now.day}일 ${weekdayLabelOf(now)}요일';
 
@@ -175,17 +177,53 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-        Container(
+        _NotificationButton(unread: ref.watch(unreadNotificationCountProvider)),
+      ],
+    );
+  }
+}
+
+/// 지난 알림 목록으로 가는 종 버튼. 안 읽은 알림이 있으면 점을 띄운다.
+class _NotificationButton extends StatelessWidget {
+  final int unread;
+  const _NotificationButton({required this.unread});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.card,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const NotificationListScreen()),
+        ),
+        child: SizedBox(
           width: 40,
           height: 40,
-          decoration: const BoxDecoration(
-            color: AppColors.card,
-            shape: BoxShape.circle,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              const Icon(Icons.notifications_none,
+                  size: 20, color: AppColors.textSub),
+              if (unread > 0)
+                Positioned(
+                  top: 9,
+                  right: 9,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.card, width: 1.5),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          child: const Icon(Icons.notifications_none,
-              size: 20, color: AppColors.textSub),
         ),
-      ],
+      ),
     );
   }
 }
