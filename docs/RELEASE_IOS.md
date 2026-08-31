@@ -65,7 +65,20 @@ Firebase 쪽은 처리 완료(아래 "Firebase 앱 구성" 참고). 남은 건 A
 ### 2. Android 남은 작업 (배포 시)
 `applicationId`·`namespace`·Kotlin 패키지를 `com.diana.jigeumYeogi`로 통일하고 Firebase Android 앱도 새로 등록했다. 남은 건 Play 스토어 배포 시점의 작업이다.
 
-- [ ] 릴리즈 서명 키스토어 — 현재 `buildTypes.release`가 **디버그 키로 서명**하고 있어 Play 업로드 불가
+- [ ] **릴리즈 서명 키스토어 생성** — Gradle 설정은 붙어 있다. `android/key.properties`가 있으면 그 키로, 없으면 디버그 키로 폴백한다(현재는 폴백 상태라 Play 업로드 불가).
+
+  ```bash
+  # 1) 키스토어 생성 — 비밀번호는 직접 입력한다. 잃어버리면 앱 업데이트가 영구히 불가하니 안전하게 보관할 것
+  "/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin/keytool" \
+    -genkeypair -v -keystore ~/jigeum-yeogi-upload.jks \
+    -storetype PKCS12 -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+
+  # 2) android/key.properties.example 을 복사해 값 채우기 (key.properties·*.jks 는 .gitignore 대상)
+  cp android/key.properties.example android/key.properties
+
+  # 3) 확인
+  flutter build appbundle --release
+  ```
 
 ### 3. App Store Connect 준비물
 - [ ] 앱 등록(번들 ID 선택), 기본 언어 한국어

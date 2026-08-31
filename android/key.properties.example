@@ -1,0 +1,7 @@
+# 릴리즈 서명 키스토어 설정 예시.
+# 이 파일을 android/key.properties 로 복사해 실제 값을 채운다.
+# key.properties 와 *.jks 는 .gitignore 대상 — 절대 커밋하지 않는다.
+storePassword=키스토어_비밀번호
+keyPassword=키_비밀번호
+keyAlias=upload
+storeFile=/Users/사용자/키스토어경로/jigeum-yeogi-upload.jks
