@@ -18,6 +18,7 @@ App Store(TestFlight 포함) 배포를 위한 준비 항목. 코드로 처리한
 | 앱 아이콘 | 브랜드 로고로 교체. 소스는 모서리 알파를 그라디언트로 메운 1024px 불투명 PNG | `assets/icon/app_icon.png` → `ios/Runner/Assets.xcassets/AppIcon.appiconset/` |
 | 런치 스크린 | 기본 Flutter 로고 → 브랜드 로고(120pt), 배경을 앱 배경색 `#FAF7F2`로 | `LaunchImage.imageset/`, `Base.lproj/LaunchScreen.storyboard` |
 | Firebase iOS 앱 | 새 번들 ID로 앱 생성(`1:901669927711:ios:296302245906de2e2bce2a`) + 설정 파일 교체 + `firebase_options.dart` 재생성 | `ios/Runner/GoogleService-Info.plist`, `lib/firebase_options.dart` |
+| Android 아이콘 | adaptive icon — 배경 `#F8815D` + 전경(핀만 추출, 안전 영역 62%) | `assets/icon/app_icon_foreground.png` → `android/app/src/main/res/` |
 | 앱 설명 | `pubspec.yaml` 기본 문구 → 실제 설명 | `pubspec.yaml` |
 | 스모크 테스트 | 로그인 우선 진입 개편에 맞게 갱신(기존 실패 상태였음) | `test/widget_test.dart` |
 
@@ -65,11 +66,10 @@ Firebase 쪽은 처리 완료(아래 "Firebase 앱 구성" 참고). 남은 건 A
 `applicationId`·`namespace`·Kotlin 패키지를 `com.diana.jigeumYeogi`로 통일하고 Firebase Android 앱도 새로 등록했다. 남은 건 Play 스토어 배포 시점의 작업이다.
 
 - [ ] 릴리즈 서명 키스토어 — 현재 `buildTypes.release`가 **디버그 키로 서명**하고 있어 Play 업로드 불가
-- [ ] 앱 아이콘 — 아직 기본 Flutter 로고. adaptive icon용 전경 이미지(안전 영역 고려)를 따로 만들어 `flutter_launcher_icons`에 `android: true`로 추가
 
 ### 3. App Store Connect 준비물
 - [ ] 앱 등록(번들 ID 선택), 기본 언어 한국어
-- [ ] **개인정보처리방침 URL** — 필수. 이메일·이름·출결 기록 수집 사실을 명시
+- [ ] **개인정보처리방침 URL** — 초안은 `docs/PRIVACY_POLICY.md`. `{{ }}` 항목을 채우고 공개 URL로 배포한 뒤 등록
 - [ ] 앱 개인정보 보호(App Privacy) 설문 — `PrivacyInfo.xcprivacy`와 일치하게 작성
 - [ ] 스크린샷: 6.9"(또는 6.7") 및 13" iPad — 세로
 - [ ] 심사 메모: **선생님/학부모 테스트 계정**과 선생님 코드 제공 (계정 없으면 심사 진행 불가)
@@ -89,5 +89,5 @@ flutter build ipa --release          # build/ios/archive/*.xcarchive + ipa
 ### 검증 완료 기록
 - `flutter build ios --release --no-codesign` 성공 (Runner.app 44.0MB)
 - 산출물 확인: 번들 ID `com.diana.jigeumYeogi`, 표시 이름 `지금여기`, 세로 전용, `ITSAppUsesNonExemptEncryption=false`, `PrivacyInfo.xcprivacy` 번들 포함, AppIcon·LaunchImage 자산 카탈로그 반영
-- `flutter build apk --release` 성공 — APK 패키지명 `com.diana.jigeumYeogi`, minSdk 24
+- `flutter build apk --release` 성공 — APK 패키지명 `com.diana.jigeumYeogi`, minSdk 24, adaptive icon 반영
 - `flutter analyze` 이슈 0 / `flutter test` 통과
