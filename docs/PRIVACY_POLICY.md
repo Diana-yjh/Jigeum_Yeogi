@@ -16,6 +16,12 @@ https://diana-yjh.github.io/Jigeum_Yeogi/privacy/
 
 이 주소를 App Store Connect(앱 정보 → 개인정보 처리방침 URL)와 Play Console(앱 콘텐츠 → 개인정보처리방침)에 등록한다.
 
+계정 삭제 안내 페이지도 같이 서빙된다 — Play 데이터 안전 섹션의 "계정 삭제 URL"에 등록:
+
+```
+https://diana-yjh.github.io/Jigeum_Yeogi/account-deletion/
+```
+
 > 저장소가 비공개로 바뀌면 Pages도 내려가므로, 그 경우 다른 호스팅으로 옮겨야 한다.
 
 ## 내용을 고칠 때

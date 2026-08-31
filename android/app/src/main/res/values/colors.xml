@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#F8815D</color>
+    <!-- 런치 스플래시 배경 — 앱 배경색(AppColors.background)과 동일 -->
+    <color name="launch_background">#FAF7F2</color>
 </resources>

@@ -21,6 +21,9 @@ App Store(TestFlight 포함) 배포를 위한 준비 항목. 코드로 처리한
 | Android 아이콘 | adaptive icon — 배경 `#F8815D` + 전경(핀만 추출, 안전 영역 62%) | `assets/icon/app_icon_foreground.png` → `android/app/src/main/res/` |
 | 앱 설명 | `pubspec.yaml` 기본 문구 → 실제 설명 | `pubspec.yaml` |
 | 스모크 테스트 | 로그인 우선 진입 개편에 맞게 갱신(기존 실패 상태였음) | `test/widget_test.dart` |
+| Android 매니페스트 | 표시 이름 `지금여기`, 세로 고정(`screenOrientation=portrait`) | `android/app/src/main/AndroidManifest.xml` |
+| Android 런치 스플래시 | iOS와 동일하게 배경 `#FAF7F2` + 로고 120dp. 다크 모드에서도 라이트 유지 | `res/drawable*/launch_background.xml`, `res/values*/styles.xml`, `res/values/colors.xml` |
+| 계정 삭제 안내 페이지 | Play 데이터 안전 섹션이 요구하는 웹 URL | `docs/account-deletion/index.html` |
 
 ### 아이콘 갱신 방법
 `assets/icon/app_icon.png`(1024×1024, 알파 없음)를 교체한 뒤 `dart run flutter_launcher_icons` 실행. 설정은 `pubspec.yaml`의 `flutter_launcher_icons` 블록에 있다.
@@ -63,26 +66,55 @@ flutterfire configure --project=jigeum-yeogi-25737 \
 
 이게 없으면 릴리즈 빌드에서 등하원 푸시가 발송되지 않는다.
 
-### 2. Android 남은 작업 (배포 시)
-`applicationId`·`namespace`·Kotlin 패키지를 `com.diana.jigeumYeogi`로 통일하고 Firebase Android 앱도 새로 등록했다. 남은 건 Play 스토어 배포 시점의 작업이다.
+### 2. Android — Play 배포
 
-- [ ] **릴리즈 서명 키스토어 생성** — Gradle 설정은 붙어 있다. `android/key.properties`가 있으면 그 키로, 없으면 디버그 키로 폴백한다(현재는 폴백 상태라 Play 업로드 불가).
+`applicationId`·`namespace`·Kotlin 패키지는 `com.diana.jigeumYeogi`로 통일됐고 Firebase Android 앱도 등록돼 있다. 아이콘·스플래시·세로 고정·한글 라벨까지 코드 쪽은 끝났다.
 
-  ```bash
-  # 1) 키스토어 생성 — 비밀번호는 직접 입력한다. 잃어버리면 앱 업데이트가 영구히 불가하니 안전하게 보관할 것
-  "/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin/keytool" \
-    -genkeypair -v -keystore ~/jigeum-yeogi-upload.jks \
-    -storetype PKCS12 -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#### 2-1. 릴리즈 키스토어 ⛔ Play 업로드 차단
+Gradle 설정은 붙어 있다 — `android/key.properties`가 있으면 그 키로, 없으면 디버그 키로 폴백(현재 상태). **터미널에서 직접** 실행한다(비밀번호를 대화에 남기지 않기 위해).
 
-  # 2) android/key.properties.example 을 복사해 값 채우기 (key.properties·*.jks 는 .gitignore 대상)
-  cp android/key.properties.example android/key.properties
+```bash
+# 1) 키스토어 생성 — 비밀번호를 물어본다. 잃어버리면 앱 업데이트가 영구히 불가하니 비밀번호 관리자에 보관할 것
+"/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin/keytool" \
+  -genkeypair -v -keystore ~/jigeum-yeogi-upload.jks \
+  -storetype PKCS12 -keyalg RSA -keysize 2048 -validity 10000 -alias upload \
+  -dname "CN=Jigeum Yeogi, O=Jigeum Yeogi, C=KR"
 
-  # 3) 확인
-  flutter build appbundle --release
-  ```
+# 2) key.properties 작성 (gitignore 대상)
+cp android/key.properties.example android/key.properties
+#    → storeFile=/Users/<사용자>/jigeum-yeogi-upload.jks, 비밀번호·alias(upload) 채우기
+
+# 3) 서명 확인
+flutter build appbundle --release
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+  ~/Library/Android/sdk/build-tools/36.0.0/apksigner verify --print-certs \
+  build/app/outputs/bundle/release/app-release.aab 2>/dev/null || \
+  keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | head -3
+#    → CN=Jigeum Yeogi 가 나오면 성공(CN=Android Debug 면 key.properties 경로 확인)
+```
+
+Play는 **앱 서명 키를 Google이 관리**(Play App Signing)하고, 이 키스토어는 "업로드 키"가 된다. 첫 업로드 때 Play Console이 자동으로 등록해 준다.
+
+#### 2-2. Play Console 준비물
+- [ ] Google Play 개발자 계정 (1회 $25) → **앱 만들기** (이름 지금여기, 기본 언어 한국어, 앱, 무료)
+- [ ] **개인정보처리방침 URL**: `https://diana-yjh.github.io/Jigeum_Yeogi/privacy/`
+- [ ] **계정 삭제 URL** (데이터 안전 → 계정 삭제 요구사항): `https://diana-yjh.github.io/Jigeum_Yeogi/account-deletion/`
+- [ ] **데이터 안전 설문** — 수집: 이메일·이름·사용자 ID·앱 활동(출결). 공유 없음, 전송 암호화, 삭제 요청 가능. `PrivacyInfo.xcprivacy`와 같은 내용
+- [ ] 콘텐츠 등급 설문 (교육/유틸리티 — 전체이용가)
+- [ ] 타겟층: 아동 대상 아님(이용자는 선생님·학부모). "어린이 및 가족" 프로그램 미참여
+- [ ] 스토어 등록정보: 짧은 설명(80자), 전체 설명(4000자), **스크린샷 휴대전화 최소 2장**(16:9~9:16), **그래픽 이미지 1024×500** 필수, 아이콘 512×512(`assets/icon/app_icon.png` 축소)
+- [ ] 심사용 테스트 계정(선생님/학부모) + 선생님 코드 — "앱 액세스" 섹션에 기입
+
+#### 2-3. 업로드
+```bash
+flutter build appbundle --release        # build/app/outputs/bundle/release/app-release.aab
+```
+Play Console → 테스트 → **내부 테스트** → 새 버전 만들기 → AAB 업로드. 내부 테스트는 심사 없이 즉시 배포되며 이메일 목록으로 최대 100명. 프로덕션으로 갈 때는 **비공개 테스트 12명 × 14일** 요건(개인 개발자 계정, 2023-11 이후 생성)을 먼저 채워야 한다.
+
+재업로드 시 `pubspec.yaml`의 빌드 번호(`+1`)를 올린다 — Play는 versionCode 중복을 거부한다.
 
 ### 3. App Store Connect 준비물
-- [ ] 앱 등록(번들 ID 선택), 기본 언어 한국어
+- [x] 앱 등록, 기본 언어 한국어
 - [ ] **개인정보처리방침 URL** — 정본 `docs/privacy/index.html`. GitHub Pages(Settings → Pages → main `/docs`)를 켜면 `https://diana-yjh.github.io/Jigeum_Yeogi/privacy/` 로 열린다. 이 주소를 등록한다. 절차는 `docs/PRIVACY_POLICY.md`
 - [ ] 앱 개인정보 보호(App Privacy) 설문 — `PrivacyInfo.xcprivacy`와 일치하게 작성
 - [ ] 스크린샷: 6.9"(또는 6.7") 및 13" iPad — 세로
