@@ -27,6 +27,19 @@ class RoleSelectScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Spacer(),
+              // 로고 — 이미지 자체에 둥근 모서리가 있어 그림자만 얹는다.
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  boxShadow: AppShadow.soft,
+                ),
+                child: Image.asset(
+                  'assets/images/app_logo.png',
+                  width: 72,
+                  height: 72,
+                ),
+              ),
+              const SizedBox(height: AppSpace.md),
               Text('지금여기', style: AppText.display.copyWith(fontSize: 36)),
               const SizedBox(height: AppSpace.sm),
               const Text(
