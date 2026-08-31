@@ -7,6 +7,7 @@ import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/notifications/models/notification_item.dart';
 import 'package:jigeum_yeogi/features/notifications/state/notification_providers.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 지난 알림 목록(학부모). 홈의 벨 아이콘으로 진입한다.
 class NotificationListScreen extends ConsumerStatefulWidget {
@@ -37,10 +38,9 @@ class _NotificationListScreenState
   Widget build(BuildContext context) {
     final async = ref.watch(notificationHistoryProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Text('알림', style: AppText.cardTitle),

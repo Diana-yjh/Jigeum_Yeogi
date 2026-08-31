@@ -11,6 +11,7 @@ import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 import 'package:jigeum_yeogi/shared/widgets/status_pill.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 // 체류 타임바 축(분): 10:00 ~ 20:00.
 const _axisStart = 10 * 60;
@@ -56,8 +57,7 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
     final selected = _selected ?? _autoSelect(byDay);
     final selRec = byDay[selected.day];
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(AppSpace.md),

@@ -12,6 +12,7 @@ import 'package:jigeum_yeogi/features/settings/widgets/edit_name_dialog.dart';
 import 'package:jigeum_yeogi/models/app_user.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 import 'package:jigeum_yeogi/models/user_role.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 설정 화면 — 역할별 분기(학부모/선생님).
 class SettingsScreen extends ConsumerWidget {
@@ -21,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(appUserProvider).value;
     if (user == null) {
-      return const Scaffold(backgroundColor: AppColors.background);
+      return const AppScaffold();
     }
     return user.role == Role.teacher
         ? _TeacherSettings(user: user)
@@ -192,8 +193,7 @@ class _ParentSettings extends ConsumerWidget {
     }
     childRows.add(_addChildRow(context, ref, user.uid, code));
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(AppSpace.md),
@@ -462,8 +462,7 @@ class _TeacherSettings extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final studentCount = ref.watch(teacherStudentsProvider).value?.length ?? 0;
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(AppSpace.md),

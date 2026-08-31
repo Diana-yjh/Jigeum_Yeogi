@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 후속 Phase에서 채워질 화면용 공용 더미 위젯.
 class PlaceholderScreen extends StatelessWidget {
@@ -18,8 +19,7 @@ class PlaceholderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       body: SafeArea(
         child: Center(
           child: Padding(

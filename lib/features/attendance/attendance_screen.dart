@@ -13,6 +13,7 @@ import 'package:jigeum_yeogi/features/attendance/widgets/student_card.dart';
 import 'package:jigeum_yeogi/features/calendar/teacher_calendar_screen.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/student.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 출석 화면 (선생님). 실 데이터: 내 코드 소속 학생 + 오늘 출석 기록.
 /// 학생별 버튼 한 번으로 등원 → 하원 체크.
@@ -99,8 +100,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final now = DateTime.now();
     final dateLabel = '${now.month}월 ${now.day}일 ${_weekdays[now.weekday - 1]}요일';
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSpace.md),

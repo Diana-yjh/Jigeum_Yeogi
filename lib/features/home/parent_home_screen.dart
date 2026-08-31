@@ -11,6 +11,7 @@ import 'package:jigeum_yeogi/features/notifications/state/notification_providers
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 import 'package:jigeum_yeogi/shared/widgets/status_pill.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 학부모 홈 — "우리 아이가 지금 어디 있는지"가 1초 안에 읽히는 화면.
 class ParentHomeScreen extends ConsumerWidget {
@@ -22,8 +23,7 @@ class ParentHomeScreen extends ConsumerWidget {
 
     // 자녀 2명 이상이면 아이별 구획을 좌우로 넘겨 본다.
     if (children.length >= 2) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
+      return AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
@@ -45,8 +45,7 @@ class ParentHomeScreen extends ConsumerWidget {
     final today = ref.watch(childTodayRecordProvider).value;
     final week = ref.watch(childWeekRecordsProvider).value ?? const [];
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(

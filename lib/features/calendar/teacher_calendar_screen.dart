@@ -9,6 +9,7 @@ import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
 import 'package:jigeum_yeogi/features/calendar/widgets/calendar_cells.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 선생님 출결 달력 — 날짜별 출석한 아이 명단·시각.
 /// (출석 화면 상단 달력 아이콘으로 진입)
@@ -41,10 +42,9 @@ class _TeacherCalendarScreenState extends ConsumerState<TeacherCalendarScreen> {
         .where((r) => r.date == dateKey(_selected) && r.isCheckedIn)
         .toList();
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppColors.textMain,
         title: const Text('출결 달력'),

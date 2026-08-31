@@ -9,6 +9,7 @@ import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart
 import 'package:jigeum_yeogi/features/schedule/state/schedule_providers.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 선생님 홈 — 오늘 등원 예정 아이들과 등원 현황.
 class TeacherHomeScreen extends ConsumerWidget {
@@ -26,8 +27,7 @@ class TeacherHomeScreen extends ConsumerWidget {
         scheduled.where((s) => recById[s.id]?.isCheckedIn == true).length;
     final todayKey = ref.watch(todayKeyProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(

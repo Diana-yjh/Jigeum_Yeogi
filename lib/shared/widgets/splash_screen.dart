@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 인증/프로필 로딩 중 표시하는 스플래시.
 class SplashScreen extends StatelessWidget {
@@ -10,8 +11,7 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -6,6 +6,7 @@ import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/features/auth/data/auth_repository.dart';
 import 'package:jigeum_yeogi/features/auth/state/auth_providers.dart';
 import 'package:jigeum_yeogi/models/user_role.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 역할별 로그인/회원가입 화면.
 /// - 선생님: 이름/이메일/비밀번호 (가입 시 6자리 코드 자동 발급)
@@ -81,10 +82,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppColors.textMain,
         title: Text('$_roleLabel ${_isSignUp ? '회원가입' : '로그인'}'),

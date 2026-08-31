@@ -5,6 +5,7 @@ import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/features/auth/onboarding/auth_screen.dart';
 import 'package:jigeum_yeogi/models/user_role.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 시작 화면 — 선생님 / 학부모 역할 선택 후 해당 역할의 로그인/회원가입으로 이동.
 class RoleSelectScreen extends StatelessWidget {
@@ -18,8 +19,7 @@ class RoleSelectScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSpace.lg),

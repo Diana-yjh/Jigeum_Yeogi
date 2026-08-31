@@ -8,6 +8,7 @@ import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/schedule/state/schedule_providers.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
 import 'package:jigeum_yeogi/models/student.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 const _defaultSlot = '15:00';
 
@@ -75,10 +76,9 @@ class _StudentScheduleScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppColors.textMain,
         title: Text('${widget.student.name} 스케줄'),

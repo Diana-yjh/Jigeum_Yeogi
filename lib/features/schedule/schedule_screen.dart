@@ -12,6 +12,7 @@ import 'package:jigeum_yeogi/features/schedule/state/schedule_providers.dart';
 import 'package:jigeum_yeogi/features/schedule/student_schedule_screen.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
 import 'package:jigeum_yeogi/models/student.dart';
+import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
 
 /// 선생님 스케줄 화면 — 학생별 설정(탭 → 상세) + 월간 보기.
 class ScheduleScreen extends ConsumerStatefulWidget {
@@ -33,8 +34,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final summaryCount =
         ref.watch(scheduledOnProvider(weekdayCodeOf(summaryDate))).length;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return AppScaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSpace.md),
