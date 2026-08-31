@@ -83,7 +83,7 @@ flutterfire configure --project=jigeum-yeogi-25737 \
 
 ### 3. App Store Connect 준비물
 - [ ] 앱 등록(번들 ID 선택), 기본 언어 한국어
-- [ ] **개인정보처리방침 URL** — 초안은 `docs/PRIVACY_POLICY.md`. `{{ }}` 항목을 채우고 공개 URL로 배포한 뒤 등록
+- [ ] **개인정보처리방침 URL** — 정본 `docs/privacy/index.html`. GitHub Pages(Settings → Pages → main `/docs`)를 켜면 `https://diana-yjh.github.io/Jigeum_Yeogi/privacy/` 로 열린다. 등록. 절차는 `docs/PRIVACY_POLICY.md`
 - [ ] 앱 개인정보 보호(App Privacy) 설문 — `PrivacyInfo.xcprivacy`와 일치하게 작성
 - [ ] 스크린샷: 6.9"(또는 6.7") 및 13" iPad — 세로
 - [ ] 심사 메모: **선생님/학부모 테스트 계정**과 선생님 코드 제공 (계정 없으면 심사 진행 불가)
