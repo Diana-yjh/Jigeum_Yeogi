@@ -8,6 +8,7 @@ import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
 import 'package:jigeum_yeogi/features/auth/data/auth_repository.dart';
 import 'package:jigeum_yeogi/features/auth/state/auth_providers.dart';
+import 'package:jigeum_yeogi/features/settings/widgets/edit_name_dialog.dart';
 import 'package:jigeum_yeogi/models/app_user.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 import 'package:jigeum_yeogi/models/user_role.dart';
@@ -173,8 +174,20 @@ class _ParentSettings extends ConsumerWidget {
       childRows.add(_childRow('연결된 자녀 없음'));
     } else {
       for (final c in children) {
-        childRows.add(_childRow(c.name,
-            onDelete: () => _confirmDeleteChild(context, ref, c)));
+        childRows.add(_childRow(
+          c.name,
+          onEdit: () => showDialog(
+            context: context,
+            builder: (_) => EditNameDialog(
+              title: '아이 이름 수정',
+              label: '자녀 이름',
+              initial: c.name,
+              onSubmit: (name) =>
+                  ref.read(authRepositoryProvider).renameChild(c.id, name),
+            ),
+          ),
+          onDelete: () => _confirmDeleteChild(context, ref, c),
+        ));
       }
     }
     childRows.add(_addChildRow(context, ref, user.uid, code));
@@ -191,7 +204,7 @@ class _ParentSettings extends ConsumerWidget {
                     fontWeight: FontWeight.w600,
                     color: AppColors.textMain)),
             const SizedBox(height: AppSpace.md),
-            _profileCard(user),
+            _profileCard(context, ref, user),
             const SizedBox(height: AppSpace.sm),
             _codeCard(context, ref, user.uid, code, childIds),
             const SizedBox(height: AppSpace.md),
@@ -223,8 +236,22 @@ class _ParentSettings extends ConsumerWidget {
     );
   }
 
-  Widget _profileCard(AppUser user) {
-    return Container(
+  /// 프로필 카드 — 탭하면 내 이름 수정.
+  Widget _profileCard(BuildContext context, WidgetRef ref, AppUser user) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      onTap: () => showDialog(
+        context: context,
+        builder: (_) => EditNameDialog(
+          title: '내 이름 수정',
+          label: '이름',
+          initial: user.name,
+          onSubmit: (name) => ref
+              .read(authRepositoryProvider)
+              .updateUserFields(user.uid, {'name': name}),
+        ),
+      ),
+      child: Container(
       padding: const EdgeInsets.all(AppSpace.md),
       decoration: AppDecoration.card(),
       child: Row(
@@ -255,6 +282,7 @@ class _ParentSettings extends ConsumerWidget {
           ),
           const Icon(Icons.chevron_right, size: 20, color: AppColors.textFaint),
         ],
+      ),
       ),
     );
   }
@@ -300,7 +328,7 @@ class _ParentSettings extends ConsumerWidget {
     );
   }
 
-  Widget _childRow(String name, {VoidCallback? onDelete}) {
+  Widget _childRow(String name, {VoidCallback? onEdit, VoidCallback? onDelete}) {
     return SizedBox(
       height: 44,
       child: Row(
@@ -313,6 +341,15 @@ class _ParentSettings extends ConsumerWidget {
           ),
           const SizedBox(width: AppSpace.sm),
           Expanded(child: Text(name, style: AppText.body)),
+          if (onEdit != null)
+            GestureDetector(
+              onTap: onEdit,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpace.sm),
+                child: Icon(Icons.edit_outlined,
+                    size: 18, color: AppColors.textFaint),
+              ),
+            ),
           if (onDelete != null)
             GestureDetector(
               onTap: onDelete,
@@ -442,7 +479,21 @@ class _TeacherSettings extends ConsumerWidget {
                 children: [
                   const Text('내 정보', style: AppText.cardTitle),
                   const SizedBox(height: AppSpace.sm),
-                  _row('이름', user.name),
+                  _row(
+                    '이름',
+                    user.name,
+                    onEdit: () => showDialog(
+                      context: context,
+                      builder: (_) => EditNameDialog(
+                        title: '내 이름 수정',
+                        label: '이름',
+                        initial: user.name,
+                        onSubmit: (name) => ref
+                            .read(authRepositoryProvider)
+                            .updateUserFields(user.uid, {'name': name}),
+                      ),
+                    ),
+                  ),
                   _row('역할', '선생님'),
                   _row('이메일', user.email),
                   _row('우리 반 학생', '$studentCount명'),
@@ -460,17 +511,28 @@ class _TeacherSettings extends ConsumerWidget {
     );
   }
 
-  Widget _row(String label, String value) {
-    return Padding(
+  Widget _row(String label, String value, {VoidCallback? onEdit}) {
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: AppText.caption),
-          Text(value, style: AppText.body),
+          Row(
+            children: [
+              Text(value, style: AppText.body),
+              if (onEdit != null) ...[
+                const SizedBox(width: AppSpace.sm),
+                const Icon(Icons.edit_outlined,
+                    size: 18, color: AppColors.textFaint),
+              ],
+            ],
+          ),
         ],
       ),
     );
+    if (onEdit == null) return row;
+    return InkWell(onTap: onEdit, child: row);
   }
 }
 

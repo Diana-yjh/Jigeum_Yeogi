@@ -63,6 +63,14 @@ class AuthRepository {
     });
   }
 
+  /// 자녀(학생) 이름 수정.
+  Future<void> renameChild(String studentId, String name) {
+    return _db
+        .collection('students')
+        .doc(studentId)
+        .set({'name': name.trim()}, SetOptions(merge: true));
+  }
+
   /// 자녀(학생) 삭제. 출결 기록은 Cloud Functions(onStudentDelete)가 정리.
   Future<void> deleteChild(String studentId) {
     return _db.collection('students').doc(studentId).delete();
