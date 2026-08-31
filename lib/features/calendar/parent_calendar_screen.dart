@@ -10,14 +10,17 @@ import 'package:jigeum_yeogi/features/calendar/widgets/calendar_cells.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
 import 'package:jigeum_yeogi/models/student.dart';
-import 'package:jigeum_yeogi/shared/widgets/status_pill.dart';
 import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
+import 'package:jigeum_yeogi/shared/widgets/status_pill.dart';
 
 // 체류 타임바 축(분): 10:00 ~ 20:00.
 const _axisStart = 10 * 60;
 const _axisEnd = 20 * 60;
 
 /// 학부모 출결 달력 — 커스텀 그리드 + 선택 날짜 체류 상세.
+///
+/// 자녀가 여러 명이면 한 달력에 모두 표시한다. 아이마다 색을 배정해
+/// 날짜 아래 도트를 아이 수만큼 찍고, 상세 카드에 아이별로 한 블록씩 보여준다.
 class ParentCalendarScreen extends ConsumerStatefulWidget {
   const ParentCalendarScreen({super.key});
 
@@ -29,7 +32,6 @@ class ParentCalendarScreen extends ConsumerStatefulWidget {
 class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
   late DateTime _month; // 해당 월 1일
   DateTime? _selected; // null이면 자동 선택(오늘/마지막 출석일)
-  String? _childId; // 자녀 여러 명일 때 보고 있는 아이. null이면 첫째
 
   @override
   void initState() {
@@ -48,22 +50,29 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final children = ref.watch(childrenProvider).value ?? const <Student>[];
-    final child = children.isEmpty
-        ? null
-        : children.firstWhere((c) => c.id == _childId,
-            orElse: () => children.first);
-    // 월 기록은 자녀 전체가 한 번에 오므로 보고 있는 아이 것만 고른다.
     final records =
-        (ref.watch(childMonthRecordsProvider(monthKey(_month))).value ??
-                const <AttendanceRecord>[])
-            .where((r) => child == null || r.studentId == child.id)
-            .toList();
-    final byDay = {
-      for (final r in records) int.parse(r.date.split('-')[2]): r,
+        ref.watch(childMonthRecordsProvider(monthKey(_month))).value ??
+            const <AttendanceRecord>[];
+
+    // 아이 순서 → 색. 자녀가 한 명이면 primary 하나.
+    final colorOf = <String, Color>{
+      for (var i = 0; i < children.length; i++)
+        children[i].id: AppColors.childColor(i),
     };
+    final studentOf = {for (final c in children) c.id: c};
+
+    // 날짜별 등원 기록(아이 순서대로).
+    final byDay = <int, List<AttendanceRecord>>{};
+    for (final r in records.where((r) => r.isCheckedIn)) {
+      byDay.putIfAbsent(int.parse(r.date.split('-')[2]), () => []).add(r);
+    }
+    for (final list in byDay.values) {
+      list.sort((a, b) => _order(children, a.studentId)
+          .compareTo(_order(children, b.studentId)));
+    }
 
     final selected = _selected ?? _autoSelect(byDay);
-    final selRec = byDay[selected.day];
+    final multi = children.length >= 2;
 
     return AppScaffold(
       body: SafeArea(
@@ -72,14 +81,13 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
           children: [
             Text('출결 달력', style: AppText.screenTitle),
             const SizedBox(height: AppSpace.md),
-            // 자녀가 여러 명이면 누구 기록인지 고르는 칩.
-            if (children.length >= 2) ...[
-              _childChips(children, child!),
-              const SizedBox(height: AppSpace.md),
-            ],
             _monthHeader(),
+            if (multi) ...[
+              const SizedBox(height: AppSpace.xs),
+              _legend(children, colorOf),
+            ],
             const SizedBox(height: AppSpace.md),
-            _summary(records),
+            _summary(children, records, colorOf),
             const SizedBox(height: AppSpace.md),
             GestureDetector(
               onHorizontalDragEnd: (d) {
@@ -87,52 +95,36 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
                 if (v < -200) _changeMonth(1);
                 if (v > 200) _changeMonth(-1);
               },
-              child: _grid(byDay, selected),
+              child: _grid(byDay, selected, colorOf),
             ),
             const SizedBox(height: AppSpace.md),
-            _detail(child, selected, selRec,
-                showName: children.length >= 2),
+            _detail(
+              selected,
+              byDay[selected.day] ?? const [],
+              studentOf: studentOf,
+              colorOf: colorOf,
+              multi: multi,
+            ),
           ],
         ),
       ),
     );
   }
 
+  int _order(List<Student> children, String id) {
+    final i = children.indexWhere((c) => c.id == id);
+    return i < 0 ? children.length : i;
+  }
+
   /// 오늘(이 달일 때) 우선, 없으면 이 달 마지막 출석일, 그것도 없으면 1일.
-  DateTime _autoSelect(Map<int, AttendanceRecord> byDay) {
+  DateTime _autoSelect(Map<int, List<AttendanceRecord>> byDay) {
     final now = DateTime.now();
     if (now.year == _month.year && now.month == _month.month) {
       return DateTime(_month.year, _month.month, now.day);
     }
-    final attendedDays = byDay.entries
-        .where((e) => e.value.isCheckedIn)
-        .map((e) => e.key)
-        .toList()
-      ..sort();
-    final day = attendedDays.isNotEmpty ? attendedDays.last : 1;
+    final days = byDay.keys.toList()..sort();
+    final day = days.isNotEmpty ? days.last : 1;
     return DateTime(_month.year, _month.month, day);
-  }
-
-  // ── 자녀 선택 칩 ──
-  Widget _childChips(List<Student> children, Student current) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final c in children) ...[
-            _ChildChip(
-              name: c.name,
-              selected: c.id == current.id,
-              onTap: () => setState(() {
-                _childId = c.id;
-                _selected = null; // 아이가 바뀌면 그 아이 기준으로 자동 선택
-              }),
-            ),
-            const SizedBox(width: AppSpace.sm),
-          ],
-        ],
-      ),
-    );
   }
 
   // ── 월 이동 헤더 ──
@@ -157,14 +149,78 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
     );
   }
 
-  // ── 월간 요약(이번 달 출석) ──
-  Widget _summary(List<AttendanceRecord> records) {
-    final count = records.where((r) => r.isCheckedIn).length;
-    return _stat('이번 달 출석', '$count', '회');
+  // ── 범례(자녀 여러 명일 때) ──
+  Widget _legend(List<Student> children, Map<String, Color> colorOf) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: AppSpace.md,
+      runSpacing: AppSpace.xs,
+      children: [
+        for (final c in children)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _Dot(color: colorOf[c.id]!, size: 8),
+              const SizedBox(width: 6),
+              Text(c.name, style: AppText.caption),
+            ],
+          ),
+      ],
+    );
   }
 
-  Widget _stat(String caption, String value, String suffix) {
+  // ── 월간 요약(이번 달 출석) ──
+  Widget _summary(List<Student> children, List<AttendanceRecord> records,
+      Map<String, Color> colorOf) {
+    if (children.length < 2) {
+      final count = records.where((r) => r.isCheckedIn).length;
+      return _statCard(caption: '이번 달 출석', child: _countText('$count'));
+    }
+    // 아이별 횟수를 한 줄에 나란히.
+    return _statCard(
+      caption: '이번 달 출석',
+      child: Wrap(
+        spacing: AppSpace.md,
+        runSpacing: AppSpace.xs,
+        children: [
+          for (final c in children)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _Dot(color: colorOf[c.id]!, size: 8),
+                const SizedBox(width: 6),
+                Text(c.name, style: AppText.caption),
+                const SizedBox(width: 6),
+                _countText(
+                  '${records.where((r) => r.studentId == c.id && r.isCheckedIn).length}',
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _countText(String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Text(value,
+            style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textMain)),
+        const SizedBox(width: 2),
+        Text('회', style: AppText.caption.copyWith(fontSize: 12)),
+      ],
+    );
+  }
+
+  Widget _statCard({required String caption, required Widget child}) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: AppDecoration.card(radius: AppRadius.sm),
       child: Column(
@@ -172,28 +228,15 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
         children: [
           Text(caption, style: AppText.caption.copyWith(fontSize: 12)),
           const SizedBox(height: 2),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMain)),
-              if (suffix.isNotEmpty) ...[
-                const SizedBox(width: 2),
-                Text(suffix, style: AppText.caption.copyWith(fontSize: 12)),
-              ],
-            ],
-          ),
+          child,
         ],
       ),
     );
   }
 
   // ── 달력 그리드 ──
-  Widget _grid(Map<int, AttendanceRecord> byDay, DateTime selected) {
+  Widget _grid(Map<int, List<AttendanceRecord>> byDay, DateTime selected,
+      Map<String, Color> colorOf) {
     const dows = ['일', '월', '화', '수', '목', '금', '토'];
     final leading = _month.weekday % 7; // 일요일 시작 기준 앞 빈칸
     final daysInMonth = DateTime(_month.year, _month.month + 1, 0).day;
@@ -226,7 +269,7 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
                 for (var c = 0; c < 7; c++)
                   Expanded(
                     child: _cell(r * 7 + c - leading + 1, daysInMonth, byDay,
-                        selected, now),
+                        selected, now, colorOf),
                   ),
               ],
             ),
@@ -235,8 +278,13 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
     );
   }
 
-  Widget _cell(int day, int daysInMonth, Map<int, AttendanceRecord> byDay,
-      DateTime selected, DateTime now) {
+  Widget _cell(
+      int day,
+      int daysInMonth,
+      Map<int, List<AttendanceRecord>> byDay,
+      DateTime selected,
+      DateTime now,
+      Map<String, Color> colorOf) {
     // 앞뒤 달 날짜.
     if (day < 1 || day > daysInMonth) {
       final outDate = DateTime(_month.year, _month.month, day);
@@ -246,11 +294,14 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
           _selected = outDate;
         }),
         child: _cellBody('${outDate.day}',
-            numberColor: AppColors.textFaint, showDot: false),
+            numberColor: AppColors.textFaint, dots: const []),
       );
     }
 
-    final attended = byDay[day]?.isCheckedIn == true;
+    final dots = [
+      for (final r in byDay[day] ?? const <AttendanceRecord>[])
+        colorOf[r.studentId] ?? AppColors.primary,
+    ];
     final isSelected = selected.day == day;
     final isToday = now.year == _month.year &&
         now.month == _month.month &&
@@ -258,10 +309,10 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
 
     final Widget body = isSelected
         ? _cellBody('$day',
-            numberColor: Colors.white, selectedCircle: true, showDot: attended)
+            numberColor: Colors.white, selectedCircle: true, dots: dots)
         : _cellBody('$day',
             numberColor: isToday ? AppColors.primary : AppColors.textMain,
-            showDot: attended);
+            dots: dots);
 
     return _CellButton(
       onTap: () =>
@@ -270,10 +321,12 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
     );
   }
 
+  /// 날짜 숫자 + 아래 도트들. 도트는 아이 색 순서대로 최대 4개.
   Widget _cellBody(String number,
       {required Color numberColor,
       bool selectedCircle = false,
-      bool showDot = false}) {
+      required List<Color> dots}) {
+    final shown = dots.take(4).toList();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Column(
@@ -291,12 +344,17 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
                 fontWeight: selectedCircle ? FontWeight.w600 : FontWeight.w400),
           ),
           const SizedBox(height: 6),
-          Container(
-            width: 4,
+          // 도트가 없어도 높이는 유지(행 높이 흔들림 방지).
+          SizedBox(
             height: 4,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: showDot ? AppColors.primary : Colors.transparent,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < shown.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 3),
+                  _Dot(color: shown[i], size: 4),
+                ],
+              ],
             ),
           ),
         ],
@@ -305,14 +363,19 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
   }
 
   // ── 선택 날짜 상세 ──
-  Widget _detail(Student? child, DateTime date, AttendanceRecord? rec,
-      {bool showName = false}) {
-    final day = '${date.month}월 ${date.day}일 ${weekdayLabelOf(date)}요일';
-    // 자녀가 여러 명이면 누구 기록인지 날짜 앞에 붙인다.
-    final dateText =
-        showName && child != null ? '${child.name} · $day' : day;
+  Widget _detail(
+    DateTime date,
+    List<AttendanceRecord> recs, {
+    required Map<String, Student> studentOf,
+    required Map<String, Color> colorOf,
+    required bool multi,
+  }) {
+    final dateText = '${date.month}월 ${date.day}일 ${weekdayLabelOf(date)}요일';
+    const dateStyle = TextStyle(
+        fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMain);
+    final dayCode = weekdayCodes[date.weekday - 1];
 
-    if (rec == null || !rec.isCheckedIn) {
+    if (recs.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(AppSpace.md),
@@ -320,11 +383,7 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(dateText,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textMain)),
+            Text(dateText, style: dateStyle),
             const SizedBox(height: AppSpace.sm),
             const Text('이 날은 기록이 없어요',
                 style: TextStyle(fontSize: 14, color: AppColors.textSub)),
@@ -333,13 +392,37 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
       );
     }
 
-    final isMakeup =
-        child?.typeOn(weekdayCodes[date.weekday - 1]) == ClassType.makeup;
-    final inAt = rec.checkInAt!;
-    final outAt = rec.checkOutAt;
-    final end = outAt ?? DateTime.now();
-    final stay = end.difference(inAt);
+    // 자녀 한 명: 날짜 옆에 정규/보충 pill, 아래 타임바.
+    if (!multi) {
+      final r = recs.first;
+      final isMakeup =
+          studentOf[r.studentId]?.typeOn(dayCode) == ClassType.makeup;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpace.md),
+        decoration: AppDecoration.card(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(dateText, style: dateStyle),
+                isMakeup
+                    ? const StatusPill.makeup()
+                    : const StatusPill.regular(),
+              ],
+            ),
+            const SizedBox(height: AppSpace.md),
+            _StayRow(record: r, color: AppColors.primaryDeep),
+            const SizedBox(height: AppSpace.sm),
+            _AxisCaption(record: r),
+          ],
+        ),
+      );
+    }
 
+    // 자녀 여러 명: 날짜 아래 아이별 블록(색 도트 + 이름 + pill / 타임바 / 체류).
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpace.md),
@@ -347,83 +430,126 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(dateText,
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMain)),
-              isMakeup ? const StatusPill.makeup() : const StatusPill.regular(),
-            ],
-          ),
+          Text(dateText, style: dateStyle),
           const SizedBox(height: AppSpace.md),
-          Row(
-            children: [
-              Text(clock(inAt),
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryDeep)),
-              const SizedBox(width: AppSpace.sm),
-              Expanded(child: _StayBar(inAt: inAt, endAt: end)),
-              const SizedBox(width: AppSpace.sm),
-              Text(outAt != null ? clock(outAt) : '--:--',
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryDeep)),
-            ],
-          ),
-          const SizedBox(height: AppSpace.sm),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('${_axisStart ~/ 60}시', style: AppText.caption),
-              Text('${formatDuration(stay)} 체류', style: AppText.caption),
-              Text('${_axisEnd ~/ 60}시', style: AppText.caption),
-            ],
-          ),
+          for (var i = 0; i < recs.length; i++) ...[
+            if (i > 0)
+              const Divider(height: AppSpace.lg, color: AppColors.cardBorder),
+            _ChildStayBlock(
+              record: recs[i],
+              student: studentOf[recs[i].studentId],
+              color: colorOf[recs[i].studentId] ?? AppColors.primary,
+              dayCode: dayCode,
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-/// 셀 탭 영역.
-/// 자녀 선택 칩 — 선택된 아이는 primary 채움, 나머지는 뉴트럴.
-class _ChildChip extends StatelessWidget {
-  final String name;
-  final bool selected;
-  final VoidCallback onTap;
-  const _ChildChip(
-      {required this.name, required this.selected, required this.onTap});
+/// 다자녀 상세 — 아이 한 명 분량: 이름 행 + 타임바 + 체류 시간.
+class _ChildStayBlock extends StatelessWidget {
+  final AttendanceRecord record;
+  final Student? student;
+  final Color color;
+  final String dayCode;
+  const _ChildStayBlock({
+    required this.record,
+    required this.student,
+    required this.color,
+    required this.dayCode,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppColors.primary : AppColors.chipNeutral,
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpace.md, vertical: AppSpace.sm),
-          child: Text(
-            name,
-            style: AppText.caption.copyWith(
-              color: selected ? Colors.white : AppColors.textSub,
-              fontWeight: FontWeight.w600,
+    final isMakeup = student?.typeOn(dayCode) == ClassType.makeup;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _Dot(color: color, size: 8),
+            const SizedBox(width: AppSpace.sm),
+            Expanded(
+              child: Text(student?.name ?? '우리 아이',
+                  style: AppText.cardTitle, overflow: TextOverflow.ellipsis),
             ),
-          ),
+            isMakeup ? const StatusPill.makeup() : const StatusPill.regular(),
+          ],
         ),
-      ),
+        const SizedBox(height: AppSpace.sm),
+        _StayRow(record: record, color: color),
+        const SizedBox(height: AppSpace.xs),
+        _AxisCaption(record: record),
+      ],
     );
   }
 }
 
+/// 등원 시각 ── 체류 막대 ── 하원 시각.
+class _StayRow extends StatelessWidget {
+  final AttendanceRecord record;
+  final Color color;
+  const _StayRow({required this.record, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final inAt = record.checkInAt!;
+    final outAt = record.checkOutAt;
+    final style =
+        TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color);
+    return Row(
+      children: [
+        Text(clock(inAt), style: style),
+        const SizedBox(width: AppSpace.sm),
+        Expanded(
+          child: _StayBar(
+              inAt: inAt, endAt: outAt ?? DateTime.now(), color: color),
+        ),
+        const SizedBox(width: AppSpace.sm),
+        Text(outAt != null ? clock(outAt) : '--:--', style: style),
+      ],
+    );
+  }
+}
+
+/// 축 라벨(10시 / N시간 체류 / 20시).
+class _AxisCaption extends StatelessWidget {
+  final AttendanceRecord record;
+  const _AxisCaption({required this.record});
+
+  @override
+  Widget build(BuildContext context) {
+    final end = record.checkOutAt ?? DateTime.now();
+    final stay = end.difference(record.checkInAt!);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text('${_axisStart ~/ 60}시', style: AppText.caption),
+        Text('${formatDuration(stay)} 체류', style: AppText.caption),
+        Text('${_axisEnd ~/ 60}시', style: AppText.caption),
+      ],
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  final Color color;
+  final double size;
+  const _Dot({required this.color, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+}
+
+/// 셀 탭 영역.
 class _CellButton extends StatelessWidget {
   final VoidCallback onTap;
   final Widget child;
@@ -439,11 +565,13 @@ class _CellButton extends StatelessWidget {
   }
 }
 
-/// 체류 구간 막대(10~20시 축).
+/// 체류 구간 막대(10~20시 축). 막대 색은 아이 색을 옅게 쓴다.
 class _StayBar extends StatelessWidget {
   final DateTime inAt;
   final DateTime endAt;
-  const _StayBar({required this.inAt, required this.endAt});
+  final Color color;
+  const _StayBar(
+      {required this.inAt, required this.endAt, required this.color});
 
   double _frac(DateTime t) {
     final m = t.toLocal().hour * 60 + t.toLocal().minute;
@@ -478,7 +606,7 @@ class _StayBar extends StatelessWidget {
                 bottom: 0,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.primaryTint,
+                    color: color.withValues(alpha: 0.35),
                     borderRadius: BorderRadius.circular(7),
                   ),
                 ),

@@ -23,6 +23,16 @@ abstract class AppColors {
 
   static const danger = Color(0xFFC85C4E); // 파괴적 액션(회원탈퇴 등)
 
+  // 자녀 구분색 — 다자녀 달력에서 아이마다 하나씩. 채도를 낮춘 더스티 톤으로
+  // 코랄 primary와 나란히 놓여도 튀지 않게 맞췄다.
+  static const skyDeep = Color(0xFF6B8CB5); // 더스티 블루
+  static const plumDeep = Color(0xFF9A7BAA); // 더스티 플럼
+
+  /// 자녀 순서대로 배정하는 색. 넘치면 처음부터 다시 돈다.
+  static const childPalette = [primary, sageDeep, skyDeep, plumDeep];
+  static Color childColor(int index) =>
+      childPalette[index % childPalette.length];
+
   /// 히어로 카드용 코랄 그라디언트.
   static const primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
