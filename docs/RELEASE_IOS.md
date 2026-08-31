@@ -54,13 +54,14 @@ flutterfire configure --project=jigeum-yeogi-25737 \
 
 ## 남은 작업 (배포 전 필수)
 
-### 1. Apple Developer 설정 ⛔ 배포 차단
-Firebase 쪽은 처리 완료(아래 "Firebase 앱 구성" 참고). 남은 건 Apple 계정 작업이다.
+### 1. APNs 인증키 업로드 ⛔ 푸시 차단
+`flutter build ipa` 실행 시 Xcode 자동 서명이 App ID `com.diana.jigeumYeogi`와 배포 인증서·프로비저닝 프로파일을 만들었고, Push Notifications capability도 함께 켜졌다(IPA 엔타이틀먼트에 `aps-environment = production` 확인). 남은 건 APNs 키다.
 
-1. Apple Developer → Certificates, Identifiers & Profiles → **Identifiers**에 `com.diana.jigeumYeogi` App ID 등록, **Push Notifications** 체크
-2. **Keys** → APNs Auth Key(.p8) 생성 (Key ID·Team ID `283MVWC922` 기록)
-3. Firebase 콘솔 → 프로젝트 설정 → 클라우드 메시징 → **`지금여기 (iOS)` 앱**에 .p8 업로드
-   ⚠️ 기존 `jigeum_yeogi (ios)` 앱이 아니라 **새로 만든 앱**에 올려야 한다
+1. Apple Developer → Keys → **APNs Auth Key(.p8)** 생성 (Key ID 기록, Team ID `283MVWC922`)
+2. Firebase 콘솔 → 프로젝트 설정 → 클라우드 메시징 → **`지금여기 (iOS)` 앱**에 .p8 업로드
+   ⚠️ iOS 앱이 두 개다. 기존 `jigeum_yeogi (ios)`가 아니라 **새로 만든 앱**에 올려야 한다
+
+이게 없으면 릴리즈 빌드에서 등하원 푸시가 발송되지 않는다.
 
 ### 2. Android 남은 작업 (배포 시)
 `applicationId`·`namespace`·Kotlin 패키지를 `com.diana.jigeumYeogi`로 통일하고 Firebase Android 앱도 새로 등록했다. 남은 건 Play 스토어 배포 시점의 작업이다.
@@ -93,13 +94,23 @@ Firebase 쪽은 처리 완료(아래 "Firebase 앱 구성" 참고). 남은 건 A
 ## 빌드·업로드
 
 ```bash
-flutter build ipa --release          # build/ios/archive/*.xcarchive + ipa
-# 또는 Xcode: Product → Archive → Distribute App → App Store Connect
+flutter build ipa --release          # build/ios/ipa/지금여기.ipa
 ```
+
+업로드는 둘 중 하나:
+- **Transporter** 앱에 `build/ios/ipa/*.ipa` 드래그 앤 드롭
+- `xcrun altool --upload-app --type ios -f build/ios/ipa/*.ipa --apiKey <KEY_ID> --apiIssuer <ISSUER_ID>`
+  (App Store Connect → 사용자 및 액세스 → 통합 → App Store Connect API 키 발급 필요)
+
+업로드 전에 App Store Connect에 앱 레코드가 먼저 등록되어 있어야 한다.
 
 버전은 `pubspec.yaml`의 `version: 1.0.0+1`에서 관리한다. 재업로드 시 빌드 번호(`+1`)를 반드시 올린다.
 
 ### 검증 완료 기록
+- **`flutter build ipa --release` 성공 → `build/ios/ipa/지금여기.ipa` (30MB)**
+  - 서명: `Apple Distribution: YeJin Hong (283MVWC922)`
+  - 프로파일: `iOS Team Store Provisioning Profile: com.diana.jigeumYeogi`
+  - 엔타이틀먼트: `aps-environment = production`, `get-task-allow = false`, `beta-reports-active = true`(TestFlight)
 - `flutter build ios --release --no-codesign` 성공 (Runner.app 44.0MB)
 - 산출물 확인: 번들 ID `com.diana.jigeumYeogi`, 표시 이름 `지금여기`, 세로 전용, `ITSAppUsesNonExemptEncryption=false`, `PrivacyInfo.xcprivacy` 번들 포함, AppIcon·LaunchImage 자산 카탈로그 반영
 - `flutter build apk --release` 성공 — APK 패키지명 `com.diana.jigeumYeogi`, minSdk 24, adaptive icon 반영
