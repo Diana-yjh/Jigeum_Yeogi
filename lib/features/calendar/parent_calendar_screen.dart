@@ -29,6 +29,7 @@ class ParentCalendarScreen extends ConsumerStatefulWidget {
 class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
   late DateTime _month; // 해당 월 1일
   DateTime? _selected; // null이면 자동 선택(오늘/마지막 출석일)
+  String? _childId; // 자녀 여러 명일 때 보고 있는 아이. null이면 첫째
 
   @override
   void initState() {
@@ -46,10 +47,17 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final child = ref.watch(childProvider).value;
+    final children = ref.watch(childrenProvider).value ?? const <Student>[];
+    final child = children.isEmpty
+        ? null
+        : children.firstWhere((c) => c.id == _childId,
+            orElse: () => children.first);
+    // 월 기록은 자녀 전체가 한 번에 오므로 보고 있는 아이 것만 고른다.
     final records =
-        ref.watch(childMonthRecordsProvider(monthKey(_month))).value ??
-            const [];
+        (ref.watch(childMonthRecordsProvider(monthKey(_month))).value ??
+                const <AttendanceRecord>[])
+            .where((r) => child == null || r.studentId == child.id)
+            .toList();
     final byDay = {
       for (final r in records) int.parse(r.date.split('-')[2]): r,
     };
@@ -64,6 +72,11 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
           children: [
             Text('출결 달력', style: AppText.screenTitle),
             const SizedBox(height: AppSpace.md),
+            // 자녀가 여러 명이면 누구 기록인지 고르는 칩.
+            if (children.length >= 2) ...[
+              _childChips(children, child!),
+              const SizedBox(height: AppSpace.md),
+            ],
             _monthHeader(),
             const SizedBox(height: AppSpace.md),
             _summary(records),
@@ -77,7 +90,8 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
               child: _grid(byDay, selected),
             ),
             const SizedBox(height: AppSpace.md),
-            _detail(child, selected, selRec),
+            _detail(child, selected, selRec,
+                showName: children.length >= 2),
           ],
         ),
       ),
@@ -97,6 +111,28 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
       ..sort();
     final day = attendedDays.isNotEmpty ? attendedDays.last : 1;
     return DateTime(_month.year, _month.month, day);
+  }
+
+  // ── 자녀 선택 칩 ──
+  Widget _childChips(List<Student> children, Student current) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final c in children) ...[
+            _ChildChip(
+              name: c.name,
+              selected: c.id == current.id,
+              onTap: () => setState(() {
+                _childId = c.id;
+                _selected = null; // 아이가 바뀌면 그 아이 기준으로 자동 선택
+              }),
+            ),
+            const SizedBox(width: AppSpace.sm),
+          ],
+        ],
+      ),
+    );
   }
 
   // ── 월 이동 헤더 ──
@@ -269,8 +305,12 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
   }
 
   // ── 선택 날짜 상세 ──
-  Widget _detail(Student? child, DateTime date, AttendanceRecord? rec) {
-    final dateText = '${date.month}월 ${date.day}일 ${weekdayLabelOf(date)}요일';
+  Widget _detail(Student? child, DateTime date, AttendanceRecord? rec,
+      {bool showName = false}) {
+    final day = '${date.month}월 ${date.day}일 ${weekdayLabelOf(date)}요일';
+    // 자녀가 여러 명이면 누구 기록인지 날짜 앞에 붙인다.
+    final dateText =
+        showName && child != null ? '${child.name} · $day' : day;
 
     if (rec == null || !rec.isCheckedIn) {
       return Container(
@@ -352,6 +392,38 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
 }
 
 /// 셀 탭 영역.
+/// 자녀 선택 칩 — 선택된 아이는 primary 채움, 나머지는 뉴트럴.
+class _ChildChip extends StatelessWidget {
+  final String name;
+  final bool selected;
+  final VoidCallback onTap;
+  const _ChildChip(
+      {required this.name, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? AppColors.primary : AppColors.chipNeutral,
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpace.md, vertical: AppSpace.sm),
+          child: Text(
+            name,
+            style: AppText.caption.copyWith(
+              color: selected ? Colors.white : AppColors.textSub,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CellButton extends StatelessWidget {
   final VoidCallback onTap;
   final Widget child;
