@@ -6,6 +6,7 @@ import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
+import 'package:jigeum_yeogi/features/calendar/widgets/calendar_cells.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
 import 'package:jigeum_yeogi/models/student.dart';
@@ -242,20 +243,16 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 26,
-            height: 26,
-            alignment: Alignment.center,
+          CalendarDayNumber(
+            number: number,
             decoration: selectedCircle
                 ? const BoxDecoration(
                     color: AppColors.primary, shape: BoxShape.circle)
                 : null,
-            child: Text(number,
-                style: TextStyle(
-                    fontSize: 14,
-                    color: numberColor,
-                    fontWeight:
-                        selectedCircle ? FontWeight.w600 : FontWeight.w400)),
+            style: TextStyle(
+                fontSize: 14,
+                color: numberColor,
+                fontWeight: selectedCircle ? FontWeight.w600 : FontWeight.w400),
           ),
           const SizedBox(height: 6),
           Container(

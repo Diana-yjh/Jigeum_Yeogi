@@ -313,20 +313,18 @@ class _MonthlyViewState extends ConsumerState<_MonthlyView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 26,
-            height: 26,
-            alignment: Alignment.center,
+          CalendarDayNumber(
+            number: '${day.day}',
             decoration: isSelected
                 ? const BoxDecoration(
                     color: AppColors.primary, shape: BoxShape.circle)
                 : null,
-            child: Text('${day.day}',
-                style: TextStyle(
-                    fontSize: 14,
-                    color: numberColor,
-                    fontWeight:
-                        (isSelected || isToday) ? FontWeight.w700 : FontWeight.w400)),
+            style: TextStyle(
+                fontSize: 14,
+                color: numberColor,
+                fontWeight: (isSelected || isToday)
+                    ? FontWeight.w700
+                    : FontWeight.w400),
           ),
           const SizedBox(height: 3),
           Text(
@@ -357,8 +355,11 @@ class _MonthlyViewState extends ConsumerState<_MonthlyView> {
               firstDay: DateTime(2024, 1, 1),
               lastDay: DateTime(DateTime.now().year + 1, 12, 31),
               focusedDay: _focused,
-              rowHeight: 64, // 날짜+인원수 두 줄 여유(글씨 확대 대응)
-              daysOfWeekHeight: 24,
+              // 날짜 원 + 인원수 한 줄. 글씨 배율에 따라 함께 커진다.
+              rowHeight: calendarRowHeight(context,
+                  extra: MediaQuery.textScalerOf(context).scale(11) + 3,
+                  minimum: 64),
+              daysOfWeekHeight: calendarDowHeight(context),
               // 세로 스와이프는 페이지 스크롤에 양보(가로만 월 이동).
               availableGestures: AvailableGestures.horizontalSwipe,
               selectedDayPredicate: (d) => isSameDay(d, _selected),

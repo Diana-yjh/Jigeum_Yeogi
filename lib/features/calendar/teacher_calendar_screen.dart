@@ -83,8 +83,9 @@ class _TeacherCalendarScreenState extends ConsumerState<TeacherCalendarScreen> {
         firstDay: DateTime(2024, 1, 1),
         lastDay: DateTime(DateTime.now().year + 1, 12, 31),
         focusedDay: _focused,
-        rowHeight: 56, // 글씨 확대 대응(오버플로 방지)
-        daysOfWeekHeight: 24,
+        // 날짜 원만 들어간다. 글씨 배율에 따라 함께 커진다.
+        rowHeight: calendarRowHeight(context, minimum: 56),
+        daysOfWeekHeight: calendarDowHeight(context),
         availableGestures: AvailableGestures.horizontalSwipe,
         selectedDayPredicate: (d) => isSameDay(d, _selected),
         onDaySelected: (selected, focused) => setState(() {
