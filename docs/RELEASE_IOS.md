@@ -30,21 +30,18 @@ App Store(TestFlight 포함) 배포를 위한 준비 항목. 코드로 처리한
 iOS 아이콘은 알파 채널·둥근 모서리가 있으면 심사에서 거절되므로 **불투명 정사각형**이어야 한다.
 
 ### Firebase 앱 구성
-프로젝트 `jigeum-yeogi-25737`에 앱이 4개 있다. **기존 2개는 지우지 말 것** — macOS 빌드가 옛 iOS 앱을 참조한다.
+프로젝트 `jigeum-yeogi-25737`에 앱 2개. (옛 `com.example.*` 앱 2개와 macOS 타깃은 2026-08-31 정리)
 
-| 앱 | 번들 ID / 패키지명 | 쓰는 곳 |
-|----|-------------------|---------|
-| `지금여기 (iOS)` | `com.diana.jigeumYeogi` | **iOS 배포용 (현재)** |
-| `지금여기 (Android)` | `com.diana.jigeumYeogi` | **Android 배포용 (현재)** |
-| `jigeum_yeogi (ios)` | `com.example.jigeumYeogi` | macOS 빌드가 참조 중 |
-| `jigeum_yeogi (android)` | `com.example.jigeum_yeogi` | 미사용(구 Android 앱) |
+| 앱 | 번들 ID / 패키지명 | 용도 |
+|----|-------------------|------|
+| `지금여기 (iOS)` | `com.diana.jigeumYeogi` | iOS 배포. APNs 키 업로드 완료 |
+| `지금여기 (Android)` | `com.diana.jigeumYeogi` | Android 배포 |
 
 설정 파일은 모두 `.gitignore` 대상이라 clone 후 재생성이 필요하다:
 ```
 flutterfire configure --project=jigeum-yeogi-25737 \
-  --platforms=android,ios,macos \
+  --platforms=android,ios \
   --ios-bundle-id=com.diana.jigeumYeogi \
-  --macos-bundle-id=com.example.jigeumYeogi \
   --android-package-name=com.diana.jigeumYeogi
 ```
 
@@ -57,14 +54,8 @@ flutterfire configure --project=jigeum-yeogi-25737 \
 
 ## 남은 작업 (배포 전 필수)
 
-### 1. APNs 인증키 업로드 ⛔ 푸시 차단
-`flutter build ipa` 실행 시 Xcode 자동 서명이 App ID `com.diana.jigeumYeogi`와 배포 인증서·프로비저닝 프로파일을 만들었고, Push Notifications capability도 함께 켜졌다(IPA 엔타이틀먼트에 `aps-environment = production` 확인). 남은 건 APNs 키다.
-
-1. Apple Developer → Keys → **APNs Auth Key(.p8)** 생성 (Key ID 기록, Team ID `283MVWC922`)
-2. Firebase 콘솔 → 프로젝트 설정 → 클라우드 메시징 → **`지금여기 (iOS)` 앱**에 .p8 업로드
-   ⚠️ iOS 앱이 두 개다. 기존 `jigeum_yeogi (ios)`가 아니라 **새로 만든 앱**에 올려야 한다
-
-이게 없으면 릴리즈 빌드에서 등하원 푸시가 발송되지 않는다.
+### 1. APNs 인증키 ✅ 완료
+`AuthKey_Z6A3BQKQC2.p8`을 Firebase `지금여기 (iOS)` 앱에 업로드했다(2026-08-31). TestFlight 빌드에서 등하원 푸시 검증 가능.
 
 ### 2. Android — Play 배포
 
