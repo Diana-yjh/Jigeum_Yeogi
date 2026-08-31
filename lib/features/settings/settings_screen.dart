@@ -5,6 +5,7 @@ import 'package:jigeum_yeogi/core/theme/app_colors.dart';
 import 'package:jigeum_yeogi/core/theme/app_decorations.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
+import 'package:jigeum_yeogi/core/util/external_links.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
 import 'package:jigeum_yeogi/features/auth/data/auth_repository.dart';
 import 'package:jigeum_yeogi/features/auth/state/auth_providers.dart';
@@ -89,6 +90,32 @@ Future<void> confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
 }
 
 /// 하단 계정 액션 — 로그아웃 | 회원탈퇴.
+/// 학부모·선생님 공통 '기타' 섹션 행들 — 앱 버전, 개인정보처리방침, 문의.
+List<Widget> miscRows(BuildContext context) {
+  Widget row(String label, {String? value, Uri? link, IconData? icon}) {
+    final tail = value != null
+        ? Text(value, style: AppText.caption)
+        : Icon(icon ?? Icons.chevron_right,
+            size: 20, color: AppColors.textFaint);
+    final body = SizedBox(
+      height: 44,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [Text(label, style: AppText.body), tail],
+      ),
+    );
+    if (link == null) return body;
+    return InkWell(onTap: () => openExternal(context, link), child: body);
+  }
+
+  return [
+    row('앱 버전', value: '1.0.0'),
+    row('개인정보처리방침',
+        link: ExternalLinks.privacyPolicy, icon: Icons.open_in_new),
+    row('문의하기', link: ExternalLinks.support, icon: Icons.mail_outline),
+  ];
+}
+
 Widget accountActionsRow(BuildContext context, WidgetRef ref) {
   return Center(
     child: Row(
@@ -220,13 +247,7 @@ class _ParentSettings extends ConsumerWidget {
             ]),
             const SizedBox(height: AppSpace.md),
             const _SectionLabel('기타'),
-            _RowsCard([
-              _plainRow('앱 버전', trailingText: '1.0.0'),
-              _plainRow('문의하기',
-                  trailing: const Icon(Icons.chevron_right,
-                      size: 20, color: AppColors.textFaint),
-                  onTap: () => _snack(context, '준비 중이에요.')),
-            ]),
+            _RowsCard(miscRows(context)),
             const SizedBox(height: AppSpace.lg),
             accountActionsRow(context, ref),
             const SizedBox(height: AppSpace.md),
@@ -429,24 +450,6 @@ class _ParentSettings extends ConsumerWidget {
     );
   }
 
-  Widget _plainRow(String label,
-      {String? trailingText, Widget? trailing, VoidCallback? onTap}) {
-    final Widget tail = trailing ??
-        (trailingText != null
-            ? Text(trailingText, style: AppText.caption)
-            : const SizedBox.shrink());
-    final row = SizedBox(
-      height: 44,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: AppText.body),
-          tail,
-        ],
-      ),
-    );
-    return onTap == null ? row : InkWell(onTap: onTap, child: row);
-  }
 
   void _snack(BuildContext context, String msg) {
     ScaffoldMessenger.of(context)
@@ -501,6 +504,9 @@ class _TeacherSettings extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpace.md),
             _TeacherCodeCard(code: user.teacherCode ?? '------'),
+            const SizedBox(height: AppSpace.md),
+            const _SectionLabel('기타'),
+            _RowsCard(miscRows(context)),
             const SizedBox(height: AppSpace.lg),
             accountActionsRow(context, ref),
             const SizedBox(height: AppSpace.md),
