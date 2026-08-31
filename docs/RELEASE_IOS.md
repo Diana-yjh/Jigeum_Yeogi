@@ -143,7 +143,8 @@ xcrun altool --upload-app   --type ios -f build/ios/ipa/지금여기.ipa \
 버전은 `pubspec.yaml`의 `version: 1.0.0+1`에서 관리한다. 재업로드 시 빌드 번호(`+1`)를 반드시 올린다.
 
 ### 검증 완료 기록
-- **TestFlight 업로드 성공 (2026-08-31)** — 1.0.0 (1), Delivery UUID `77ac7bc4-a819-4ea0-8dee-9a6f831013b0`
+- **TestFlight 업로드 성공 (2026-08-31)** — 1.0.0 (2), Delivery UUID `261d2514-e178-43fd-9356-d334e9b07347` (알림함·이름 수정·다자녀 달력·배경·오전/오후 표기 포함)
+- TestFlight 업로드 성공 (2026-08-31) — 1.0.0 (1), Delivery UUID `77ac7bc4-a819-4ea0-8dee-9a6f831013b0`
 - **`flutter build ipa --release` 성공 → `build/ios/ipa/지금여기.ipa` (30MB)**
   - 서명: `Apple Distribution: YeJin Hong (283MVWC922)`
   - 프로파일: `iOS Team Store Provisioning Profile: com.diana.jigeumYeogi`
