@@ -1,4 +1,4 @@
-package com.example.jigeum_yeogi
+package com.diana.jigeumYeogi
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -26,13 +26,23 @@ App Store(TestFlight 포함) 배포를 위한 준비 항목. 코드로 처리한
 iOS 아이콘은 알파 채널·둥근 모서리가 있으면 심사에서 거절되므로 **불투명 정사각형**이어야 한다.
 
 ### Firebase 앱 구성
-프로젝트 `jigeum-yeogi-25737`에 iOS 앱이 2개 있다. 지우지 말 것.
+프로젝트 `jigeum-yeogi-25737`에 앱이 4개 있다. **기존 2개는 지우지 말 것** — macOS 빌드가 옛 iOS 앱을 참조한다.
 
-| 앱 | 번들 ID | 쓰는 곳 |
-|----|---------|---------|
-| `지금여기 (iOS)` | `com.diana.jigeumYeogi` | **iOS 배포용 (현재 앱)** |
-| `jigeum_yeogi (ios)` | `com.example.jigeumYeogi` | macOS 빌드가 아직 이 앱을 참조 |
-| `jigeum_yeogi (android)` | `com.example.jigeum_yeogi` | Android |
+| 앱 | 번들 ID / 패키지명 | 쓰는 곳 |
+|----|-------------------|---------|
+| `지금여기 (iOS)` | `com.diana.jigeumYeogi` | **iOS 배포용 (현재)** |
+| `지금여기 (Android)` | `com.diana.jigeumYeogi` | **Android 배포용 (현재)** |
+| `jigeum_yeogi (ios)` | `com.example.jigeumYeogi` | macOS 빌드가 참조 중 |
+| `jigeum_yeogi (android)` | `com.example.jigeum_yeogi` | 미사용(구 Android 앱) |
+
+설정 파일은 모두 `.gitignore` 대상이라 clone 후 재생성이 필요하다:
+```
+flutterfire configure --project=jigeum-yeogi-25737 \
+  --platforms=android,ios,macos \
+  --ios-bundle-id=com.diana.jigeumYeogi \
+  --macos-bundle-id=com.example.jigeumYeogi \
+  --android-package-name=com.diana.jigeumYeogi
+```
 
 ### 푸시 환경 분리에 대한 참고
 `Release` 구성은 `RunnerRelease.entitlements`(production)를 사용한다.
@@ -51,8 +61,11 @@ Firebase 쪽은 처리 완료(아래 "Firebase 앱 구성" 참고). 남은 건 A
 3. Firebase 콘솔 → 프로젝트 설정 → 클라우드 메시징 → **`지금여기 (iOS)` 앱**에 .p8 업로드
    ⚠️ 기존 `jigeum_yeogi (ios)` 앱이 아니라 **새로 만든 앱**에 올려야 한다
 
-### 2. Android 쪽 정리 (선택)
-`applicationId`는 아직 `com.example.jigeum_yeogi`다. 바꾸면 Android도 Firebase 앱 재등록 + `google-services.json` 교체 + Kotlin 패키지 경로 이동이 따라온다. Android 아이콘도 여전히 기본 Flutter 로고 — `flutter_launcher_icons`에 안전 영역을 고려한 adaptive foreground 이미지를 따로 넣어야 제대로 나온다.
+### 2. Android 남은 작업 (배포 시)
+`applicationId`·`namespace`·Kotlin 패키지를 `com.diana.jigeumYeogi`로 통일하고 Firebase Android 앱도 새로 등록했다. 남은 건 Play 스토어 배포 시점의 작업이다.
+
+- [ ] 릴리즈 서명 키스토어 — 현재 `buildTypes.release`가 **디버그 키로 서명**하고 있어 Play 업로드 불가
+- [ ] 앱 아이콘 — 아직 기본 Flutter 로고. adaptive icon용 전경 이미지(안전 영역 고려)를 따로 만들어 `flutter_launcher_icons`에 `android: true`로 추가
 
 ### 3. App Store Connect 준비물
 - [ ] 앱 등록(번들 ID 선택), 기본 언어 한국어
@@ -76,4 +89,5 @@ flutter build ipa --release          # build/ios/archive/*.xcarchive + ipa
 ### 검증 완료 기록
 - `flutter build ios --release --no-codesign` 성공 (Runner.app 44.0MB)
 - 산출물 확인: 번들 ID `com.diana.jigeumYeogi`, 표시 이름 `지금여기`, 세로 전용, `ITSAppUsesNonExemptEncryption=false`, `PrivacyInfo.xcprivacy` 번들 포함, AppIcon·LaunchImage 자산 카탈로그 반영
+- `flutter build apk --release` 성공 — APK 패키지명 `com.diana.jigeumYeogi`, minSdk 24
 - `flutter analyze` 이슈 0 / `flutter test` 통과
