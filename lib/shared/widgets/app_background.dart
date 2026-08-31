@@ -75,14 +75,14 @@ class _BackgroundPainter extends CustomPainter {
     _blob(canvas, Offset(w * 0.55, h * 1.06), w * 0.5,
         AppColors.primarySoft.withValues(alpha: 0.7));
 
-    // 3) 옅은 도트 결 — 종이 질감. 촘촘하지 않게 22px 간격, 반지름 1.
-    final dot = Paint()..color = AppColors.textFaint.withValues(alpha: 0.13);
+    // 3) 옅은 도트 결 — 종이 질감. 촘촘하지 않게 22px 간격, 반지름 1.2.
+    final dot = Paint()..color = AppColors.textFaint.withValues(alpha: 0.22);
     const gap = 22.0;
     for (var y = gap / 2; y < h; y += gap) {
       // 줄마다 반칸씩 어긋나게 해 격자 느낌을 줄인다.
       final shift = ((y ~/ gap).isEven) ? 0.0 : gap / 2;
       for (var x = gap / 2 + shift; x < w; x += gap) {
-        canvas.drawCircle(Offset(x, y), 1.0, dot);
+        canvas.drawCircle(Offset(x, y), 1.2, dot);
       }
     }
   }

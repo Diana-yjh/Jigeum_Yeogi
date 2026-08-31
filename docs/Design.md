@@ -61,7 +61,7 @@
 `AppScaffold`(`shared/widgets/app_background.dart`)가 모든 화면의 바닥을 그린다. 화면에서는 `Scaffold` 대신 **반드시 `AppScaffold`** 를 쓴다(하단 탭 셸만 예외).
 
 - 바탕 `background` 위에 **파스텔 번짐 3개**: 우상단 `primaryTint`, 좌하단 `sageSoft`, 하단 중앙 `primarySoft`. 블러 대신 RadialGradient라 가볍다.
-- 그 위에 **옅은 도트 결**: `textFaint` 13%, 22px 간격, 줄마다 반칸 어긋남(격자 느낌 억제).
+- 그 위에 **옅은 도트 결**: `textFaint` 22%, 22px 간격, 줄마다 반칸 어긋남(격자 느낌 억제).
 - 카드·글자 대비를 해치지 않도록 모두 낮은 농도. 정적이므로 `RepaintBoundary`로 감싸 다시 그리지 않는다.
 - AppBar를 얹을 땐 `backgroundColor: Colors.transparent` 로 패턴이 비치게 한다.
 
