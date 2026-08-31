@@ -11,7 +11,7 @@ App Store(TestFlight 포함) 배포를 위한 준비 항목. 코드로 처리한
 | 앱 표시 이름 | `Jigeum Yeogi` → **지금여기** (`CFBundleDisplayName`·`CFBundleName`) | `ios/Runner/Info.plist` |
 | 기본 언어 | `CFBundleDevelopmentRegion = ko`, `CFBundleLocalizations = [ko]` | `ios/Runner/Info.plist` |
 | 수출 규정(암호화) | `ITSAppUsesNonExemptEncryption = false` — 업로드마다 뜨던 수동 질문 제거 | `ios/Runner/Info.plist` |
-| 화면 방향 | 세로 전용 고정 (iPhone·iPad 모두) | `ios/Runner/Info.plist` |
+| 화면 방향 | 세로 전용 고정 (iPhone·iPad 모두) + `UIRequiresFullScreen=true` — iPad 멀티태스킹 미지원 선언. 이게 없으면 업로드 검증(90474)에서 4방향을 요구한다 | `ios/Runner/Info.plist` |
 | 푸시 환경 | Release 구성만 `aps-environment = production`, Debug·Profile은 `development` 유지 | `ios/Runner/RunnerRelease.entitlements` |
 | 개인정보 매니페스트 | 트래킹 없음 + 수집 항목(이메일·이름·사용자ID·출결 기록) + UserDefaults 사유(CA92.1) 선언 | `ios/Runner/PrivacyInfo.xcprivacy` |
 | 번들 ID | `com.example.jigeumYeogi` → **`com.diana.jigeumYeogi`** (RunnerTests 포함) | `ios/Runner.xcodeproj/project.pbxproj` |
@@ -97,16 +97,30 @@ flutterfire configure --project=jigeum-yeogi-25737 \
 flutter build ipa --release          # build/ios/ipa/지금여기.ipa
 ```
 
-업로드는 둘 중 하나:
-- **Transporter** 앱에 `build/ios/ipa/*.ipa` 드래그 앤 드롭
-- `xcrun altool --upload-app --type ios -f build/ios/ipa/*.ipa --apiKey <KEY_ID> --apiIssuer <ISSUER_ID>`
-  (App Store Connect → 사용자 및 액세스 → 통합 → App Store Connect API 키 발급 필요)
+업로드(App Store Connect API 키 사용, 발급 완료):
 
-업로드 전에 App Store Connect에 앱 레코드가 먼저 등록되어 있어야 한다.
+```bash
+# 검증 → 업로드. 키 파일은 ~/.appstoreconnect/private_keys/AuthKey_U2JSBK9MC7.p8 (gitignore 밖, 이 Mac에만 있음)
+xcrun altool --validate-app --type ios -f build/ios/ipa/지금여기.ipa \
+  --apiKey U2JSBK9MC7 --apiIssuer 750c4f01-77df-4f2f-ace6-b2a1eaee618d
+xcrun altool --upload-app   --type ios -f build/ios/ipa/지금여기.ipa \
+  --apiKey U2JSBK9MC7 --apiIssuer 750c4f01-77df-4f2f-ace6-b2a1eaee618d
+```
+
+- Key ID·Issuer ID는 비밀이 아니다. **`.p8` 파일만** 비밀 — 다른 Mac에서 하려면 App Store Connect에서 키를 새로 발급받는다(재다운로드 불가).
+- `~/.appstoreconnect/private_keys/`에 `AuthKey_Z6A3BQKQC2.p8`도 있는데 이건 **APNs 키**(Firebase 푸시용)다. 업로드에는 쓰지 않는다.
+- 대안: Transporter 앱에 IPA 드래그 앤 드롭.
+
+### TestFlight 흐름
+1. 업로드 후 App Store Connect → TestFlight 탭에서 빌드가 "처리 중" → 10~30분 뒤 사용 가능
+2. 첫 빌드는 **수출 규정 준수 정보** 질문이 뜰 수 있다 → `ITSAppUsesNonExemptEncryption=false`를 넣어 뒀으므로 보통 자동 통과
+3. **내부 테스터**(App Store Connect 사용자, 최대 100명)는 심사 없이 즉시 설치 가능. **외부 테스터**는 첫 빌드에 한해 간단한 베타 심사가 있다
+4. 테스터는 TestFlight 앱(App Store에서 설치)으로 초대 메일의 링크를 열어 설치한다
 
 버전은 `pubspec.yaml`의 `version: 1.0.0+1`에서 관리한다. 재업로드 시 빌드 번호(`+1`)를 반드시 올린다.
 
 ### 검증 완료 기록
+- **TestFlight 업로드 성공 (2026-08-31)** — 1.0.0 (1), Delivery UUID `77ac7bc4-a819-4ea0-8dee-9a6f831013b0`
 - **`flutter build ipa --release` 성공 → `build/ios/ipa/지금여기.ipa` (30MB)**
   - 서명: `Apple Distribution: YeJin Hong (283MVWC922)`
   - 프로파일: `iOS Team Store Provisioning Profile: com.diana.jigeumYeogi`
