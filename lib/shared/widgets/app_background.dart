@@ -1,7 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
 
-/// 화면 공용 배경 — 웜 화이트 위에 은은한 파스텔 번짐과 옅은 도트 결.
+/// 화면 공용 배경 — 웜 화이트 위에 은은한 파스텔 번짐과 테라조 조각.
 ///
 /// 카드·글자 대비를 해치지 않도록 모두 아주 낮은 농도로 그린다.
 /// 정적이라 [RepaintBoundary]로 감싸 다시 그리지 않는다.
@@ -75,15 +77,40 @@ class _BackgroundPainter extends CustomPainter {
     _blob(canvas, Offset(w * 0.55, h * 1.06), w * 0.5,
         AppColors.primarySoft.withValues(alpha: 0.7));
 
-    // 3) 옅은 도트 결 — 종이 질감. 촘촘하지 않게 22px 간격, 반지름 1.2.
-    final dot = Paint()..color = AppColors.textFaint.withValues(alpha: 0.22);
-    const gap = 22.0;
-    for (var y = gap / 2; y < h; y += gap) {
-      // 줄마다 반칸씩 어긋나게 해 격자 느낌을 줄인다.
-      final shift = ((y ~/ gap).isEven) ? 0.0 : gap / 2;
-      for (var x = gap / 2 + shift; x < w; x += gap) {
-        canvas.drawCircle(Offset(x, y), 1.2, dot);
+    // 3) 테라조 조각.
+    _terrazzo(canvas, w, h);
+  }
+
+  /// 테라조 — 피치·세이지·모래색 조각을 크기·각도 제각각으로 흩뿌린다.
+  /// 고정 시드 난수라 기기·실행마다 같은 배치가 나온다.
+  void _terrazzo(Canvas canvas, double w, double h) {
+    final rnd = _Rand(7);
+    final colors = [
+      AppColors.primaryTint.withValues(alpha: 0.55),
+      AppColors.sageSoft.withValues(alpha: 0.9),
+      AppColors.chipNeutral.withValues(alpha: 0.9),
+      AppColors.primarySoft.withValues(alpha: 0.8),
+    ];
+    final n = (w * h / 5200).round(); // 화면 크기에 비례
+    for (var i = 0; i < n; i++) {
+      final c = Offset(rnd.next() * w, rnd.next() * h);
+      final r = 3 + rnd.next() * 7;
+      final paint = Paint()..color = colors[(rnd.next() * colors.length).floor()];
+      canvas.save();
+      canvas.translate(c.dx, c.dy);
+      canvas.rotate(rnd.next() * 6.283);
+      // 살짝 찌그러진 다각형 조각
+      final path = Path();
+      final k = 4 + (rnd.next() * 3).floor();
+      for (var j = 0; j < k; j++) {
+        final a = 6.283 * j / k;
+        final rr = r * (0.7 + rnd.next() * 0.6);
+        final pt = Offset(rr * _cos(a), rr * _sin(a));
+        j == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
       }
+      path.close();
+      canvas.drawPath(path, paint);
+      canvas.restore();
     }
   }
 
@@ -101,3 +128,16 @@ class _BackgroundPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _BackgroundPainter oldDelegate) => false;
 }
+
+/// 고정 시드 선형합동 난수 — 매 프레임·매 기기에서 같은 배치를 보장한다.
+class _Rand {
+  _Rand(int seed) : _s = seed;
+  int _s;
+  double next() {
+    _s = (_s * 1103515245 + 12345) & 0x7fffffff;
+    return _s / 0x7fffffff;
+  }
+}
+
+double _cos(double a) => math.cos(a);
+double _sin(double a) => math.sin(a);
