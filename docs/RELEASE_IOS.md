@@ -61,30 +61,13 @@ flutterfire configure --project=jigeum-yeogi-25737 \
 
 `applicationId`·`namespace`·Kotlin 패키지는 `com.diana.jigeumYeogi`로 통일됐고 Firebase Android 앱도 등록돼 있다. 아이콘·스플래시·세로 고정·한글 라벨까지 코드 쪽은 끝났다.
 
-#### 2-1. 릴리즈 키스토어 ⛔ Play 업로드 차단
-Gradle 설정은 붙어 있다 — `android/key.properties`가 있으면 그 키로, 없으면 디버그 키로 폴백(현재 상태). **터미널에서 직접** 실행한다(비밀번호를 대화에 남기지 않기 위해).
+#### 2-1. 릴리즈 키스토어 ✅ 생성 완료 (2026-09-01)
+- 키스토어: `~/jigeum-yeogi-upload.jks` (PKCS12, alias `upload`, CN=Jigeum Yeogi, 2054년까지 유효)
+- 비밀번호: `android/key.properties`에만 있음(gitignore). **두 파일을 비밀번호 관리자·별도 저장소에 반드시 백업할 것** — 잃어버리면 Play 업로드 키 재설정 절차를 밟아야 한다.
+- 검증: `flutter build appbundle --release` / `apk --release` 산출물 서명이 `CN=Jigeum Yeogi`.
+- 다른 Mac에서 빌드하려면 두 파일을 같은 경로에 두거나 `key.properties`의 `storeFile`을 고친다.
 
-```bash
-# 1) 키스토어 생성 — 비밀번호를 물어본다. 잃어버리면 앱 업데이트가 영구히 불가하니 비밀번호 관리자에 보관할 것
-"/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin/keytool" \
-  -genkeypair -v -keystore ~/jigeum-yeogi-upload.jks \
-  -storetype PKCS12 -keyalg RSA -keysize 2048 -validity 10000 -alias upload \
-  -dname "CN=Jigeum Yeogi, O=Jigeum Yeogi, C=KR"
-
-# 2) key.properties 작성 (gitignore 대상)
-cp android/key.properties.example android/key.properties
-#    → storeFile=/Users/<사용자>/jigeum-yeogi-upload.jks, 비밀번호·alias(upload) 채우기
-
-# 3) 서명 확인
-flutter build appbundle --release
-JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
-  ~/Library/Android/sdk/build-tools/36.0.0/apksigner verify --print-certs \
-  build/app/outputs/bundle/release/app-release.aab 2>/dev/null || \
-  keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | head -3
-#    → CN=Jigeum Yeogi 가 나오면 성공(CN=Android Debug 면 key.properties 경로 확인)
-```
-
-Play는 **앱 서명 키를 Google이 관리**(Play App Signing)하고, 이 키스토어는 "업로드 키"가 된다. 첫 업로드 때 Play Console이 자동으로 등록해 준다.
+Play는 **앱 서명 키를 Google이 관리**(Play App Signing)하고, 이 키스토어는 "업로드 키"가 된다. 첫 업로드 때 Play Console이 자동으로 등록한다.
 
 #### 2-2. Play Console 준비물
 - [ ] Google Play 개발자 계정 (1회 $25) → **앱 만들기** (이름 지금여기, 기본 언어 한국어, 앱, 무료)
