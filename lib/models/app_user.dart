@@ -8,7 +8,7 @@ class AppUser {
   final String name;
   final String email;
   final String? teacherCode; // 선생님만 보유하는 6자리 코드
-  final String? fcmToken; // 미사용
+  final String? fcmToken; // 등하원 푸시 발송 대상(Cloud Functions에서 사용)
   final bool notifyCheckIn; // 등원 알림 (기본 on)
   final bool notifyCheckOut; // 하원 알림 (기본 on)
 

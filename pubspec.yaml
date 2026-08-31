@@ -59,9 +59,13 @@ dev_dependencies:
 # 갱신: dart run flutter_launcher_icons
 flutter_launcher_icons:
   ios: true
-  android: false
   image_path: "assets/icon/app_icon.png"
   remove_alpha_ios: true
+  # Android은 adaptive icon — 배경 단색 + 전경(핀만 추출, 안전 영역 62%)
+  android: true
+  min_sdk_android: 24
+  adaptive_icon_background: "#F8815D"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
