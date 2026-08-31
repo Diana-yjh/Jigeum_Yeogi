@@ -82,10 +82,6 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
             Text('출결 달력', style: AppText.screenTitle),
             const SizedBox(height: AppSpace.md),
             _monthHeader(),
-            if (multi) ...[
-              const SizedBox(height: AppSpace.xs),
-              _legend(children, colorOf),
-            ],
             const SizedBox(height: AppSpace.md),
             _summary(children, records, colorOf),
             const SizedBox(height: AppSpace.md),
@@ -149,27 +145,7 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
     );
   }
 
-  // ── 범례(자녀 여러 명일 때) ──
-  Widget _legend(List<Student> children, Map<String, Color> colorOf) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: AppSpace.md,
-      runSpacing: AppSpace.xs,
-      children: [
-        for (final c in children)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _Dot(color: colorOf[c.id]!, size: 8),
-              const SizedBox(width: 6),
-              Text(c.name, style: AppText.caption),
-            ],
-          ),
-      ],
-    );
-  }
-
-  // ── 월간 요약(이번 달 출석) ──
+  // ── 월간 요약(이번 달 출석) — 다자녀일 땐 색 범례 역할도 겸한다 ──
   Widget _summary(List<Student> children, List<AttendanceRecord> records,
       Map<String, Color> colorOf) {
     if (children.length < 2) {
