@@ -1,6 +1,7 @@
-// 학부모 홈 — 자녀가 여러 명이어도 아이마다 하원 타임라인과 이번 주 출석이
-// 모두 보여야 한다. (예전에는 다자녀일 때 한 줄짜리 상태 카드만 남고
-// 두 섹션이 사라졌다.)
+// 학부모 홈 — 자녀가 여러 명일 때.
+//
+// 아이마다 하원 타임라인과 이번 주 출석이 모두 보여야 하고(예전에는 한 줄짜리
+// 상태 카드만 남고 두 섹션이 사라졌다), 아이 사이는 좌우 스와이프로 넘긴다.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,7 +53,7 @@ Future<void> _loadFonts() async {
 }
 
 void main() {
-  testWidgets('자녀가 둘이면 아이마다 하원 타임라인과 이번 주 출석이 모두 보인다',
+  testWidgets('자녀가 둘이면 좌우 스와이프로 넘기고, 아이마다 타임라인·주간 출석이 보인다',
       (tester) async {
     await _loadFonts();
 
@@ -94,25 +95,36 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 아이 이름이 각각 보인다.
+    // ── 첫 페이지: 김테스트(수업 중) ──────────────────────────────
     expect(find.text('김테스트'), findsOneWidget);
-    expect(find.text('박테스트'), findsOneWidget);
-
-    // 하원 여부(히어로 카드)가 아이마다 상태에 맞게 보인다.
+    expect(find.text('박테스트'), findsNothing); // 한 번에 한 명씩
     expect(find.text('지금 학원에 있어요'), findsOneWidget);
+    expect(find.text('15:02'), findsOneWidget); // 등원 시각
+    expect(find.text('--:--'), findsOneWidget); // 아직 하원 전
+    expect(find.text('이번 주 출석'), findsOneWidget);
+    expect(find.text('2 / 3회'), findsOneWidget);
+
+    // 페이지 표시 점이 자녀 수만큼.
+    expect(find.byType(PageView), findsOneWidget);
+
+    // ── 옆으로 밀면 박테스트(하원 완료) ───────────────────────────
+    await tester.drag(find.byType(PageView), const Offset(-400, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('박테스트'), findsOneWidget);
+    expect(find.text('김테스트'), findsNothing);
     expect(find.text('집에 잘 갔어요'), findsOneWidget);
+    expect(find.text('15:10'), findsOneWidget); // 등원
+    expect(find.text('17:30'), findsOneWidget); // 하원
+    expect(find.text('이번 주 출석'), findsOneWidget);
+    // 주간 횟수는 아이별로 갈린다(형제 것이 합산되지 않는다).
+    expect(find.text('1 / 3회'), findsOneWidget);
+    expect(find.text('2 / 3회'), findsNothing);
 
-    // 등원~하원 타임라인의 시각이 아이마다 표시된다.
-    expect(find.text('15:02'), findsOneWidget); // 김테스트 등원
-    expect(find.text('--:--'), findsOneWidget); // 김테스트 하원 전
-    expect(find.text('15:10'), findsOneWidget); // 박테스트 등원
-    expect(find.text('17:30'), findsOneWidget); // 박테스트 하원
-
-    // 이번 주 출석 섹션이 아이마다 하나씩.
-    expect(find.text('이번 주 출석'), findsNWidgets(2));
-
-    // 주간 횟수는 아이별로 갈린다(합산되지 않는다).
-    expect(find.text('2 / 3회'), findsOneWidget); // 김테스트
-    expect(find.text('1 / 3회'), findsOneWidget); // 박테스트
+    // ── 다시 오른쪽으로 밀면 첫 아이로 돌아온다 ────────────────────
+    await tester.drag(find.byType(PageView), const Offset(400, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('김테스트'), findsOneWidget);
+    expect(find.text('2 / 3회'), findsOneWidget);
   });
 }

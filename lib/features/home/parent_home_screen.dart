@@ -20,21 +20,20 @@ class ParentHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final children = ref.watch(childrenProvider).value ?? const [];
 
-    // 자녀 2명 이상이면 아이별 상태 카드를 나열.
+    // 자녀 2명 이상이면 아이별 구획을 좌우로 넘겨 본다.
     if (children.length >= 2) {
       return Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpace.md, AppSpace.md, AppSpace.md, AppSpace.xl),
+          child: Column(
             children: [
-              const _Header(name: '우리 아이들'),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(
+                    AppSpace.md, AppSpace.md, AppSpace.md, 0),
+                child: _Header(name: '우리 아이들'),
+              ),
               const SizedBox(height: AppSpace.lg),
-              for (final c in children) ...[
-                _ChildSection(child: c),
-                const SizedBox(height: AppSpace.lg),
-              ],
+              Expanded(child: _ChildPager(children: children)),
             ],
           ),
         ),
@@ -61,6 +60,81 @@ class ParentHomeScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 아이별 구획을 좌우 스와이프로 넘기는 페이저.
+/// 아이가 늘어도 화면이 세로로 길어지지 않게 한 번에 한 명씩 보여준다.
+class _ChildPager extends StatefulWidget {
+  final List<Student> children;
+  const _ChildPager({required this.children});
+
+  @override
+  State<_ChildPager> createState() => _ChildPagerState();
+}
+
+class _ChildPagerState extends State<_ChildPager> {
+  final _controller = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 자녀가 삭제되면 현재 페이지가 범위를 벗어날 수 있다.
+    final index = _page.clamp(0, widget.children.length - 1);
+
+    return Column(
+      children: [
+        Expanded(
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: widget.children.length,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (context, i) => SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpace.md, 0, AppSpace.md, AppSpace.md),
+              child: _ChildSection(child: widget.children[i]),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpace.sm),
+        _PageDots(count: widget.children.length, index: index),
+        const SizedBox(height: AppSpace.md),
+      ],
+    );
+  }
+}
+
+/// 페이저 위치 표시 — 현재 페이지만 길쭉한 알약으로.
+class _PageDots extends StatelessWidget {
+  final int count;
+  final int index;
+  const _PageDots({required this.count, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (var i = 0; i < count; i++)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            width: i == index ? 18 : 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: i == index ? AppColors.primary : AppColors.cardBorder,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+          ),
+      ],
     );
   }
 }
