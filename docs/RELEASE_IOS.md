@@ -92,7 +92,7 @@ Play Console → 테스트 → **내부 테스트** → 새 버전 만들기 →
 - [ ] **개인정보처리방침 URL** — 정본 `docs/privacy/index.html`. GitHub Pages(Settings → Pages → main `/docs`)를 켜면 `https://diana-yjh.github.io/Jigeum_Yeogi/privacy/` 로 열린다. 이 주소를 등록한다. 절차는 `docs/PRIVACY_POLICY.md`
 - [ ] 앱 개인정보 보호(App Privacy) 설문 — `PrivacyInfo.xcprivacy`와 일치하게 작성
 - [ ] 스크린샷: 6.9"(또는 6.7") 및 13" iPad — 세로
-- [ ] 심사 메모: **선생님/학부모 테스트 계정**과 선생님 코드 제공 (계정 없으면 심사 진행 불가)
+- [ ] 심사 메모: 테스트 계정 — 선생님 `review.teacher@jigeumyeogi.test` / `Review-Teacher-2026`, 학부모 `review.parent@jigeumyeogi.test` / `Review-Parent-2026`, 선생님 코드 `374512` (자세한 안내문은 `docs/PLAY_CONSOLE.md` 1번)
 - [ ] 계정 삭제 경로 안내 — 설정 → 회원탈퇴 (App Store 필수 요건, 구현 완료됨)
 
 ---

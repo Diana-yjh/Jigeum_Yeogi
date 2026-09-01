@@ -19,16 +19,17 @@ Play Console → 대시보드 → "앱 설정" 항목을 위에서부터 채울 
 This app has two roles. Please test both.
 1) Teacher: sign in with the teacher account. Home shows today's expected students; the Attendance tab lets you check students in/out.
 2) Parent: sign in with the parent account. Home shows the child's live status; the Calendar tab shows monthly records.
-The parent account is already linked to the teacher's class code (6 digits, shown in Teacher > Settings). No SMS/OTP is required. Account deletion: Settings > 회원탈퇴 (Delete account).
+The parent account is already linked to the teacher's class code 374512 (also shown in Teacher > Settings). No SMS/OTP is required. Account deletion: Settings > 회원탈퇴 (Delete account).
 ```
 
-### 심사용 계정 (만들어서 채울 것)
+### 심사용 계정 ✅ 생성 완료 (`functions/scripts/create_review_accounts.js`)
 | 역할 | 이메일 | 비밀번호 | 비고 |
 |------|--------|----------|------|
-| 선생님 | `review.teacher@…` | (직접 지정) | 가입 시 6자리 코드 자동 발급 |
-| 학부모 | `review.parent@…` | (직접 지정) | 가입 시 위 코드 + 자녀 이름 "김테스트" 입력 |
+| 선생님 | `review.teacher@jigeumyeogi.test` | `Review-Teacher-2026` | 선생님 코드 **374512** |
+| 학부모 | `review.parent@jigeumyeogi.test` | `Review-Parent-2026` | 자녀 "김테스트"(월·수·금 15:00) 연결, 지난 2주 출결 6건 |
 
-실제 이용자 계정을 심사용으로 쓰지 않는다. 계정은 앱에서 직접 가입하거나, 서비스 계정 스크립트로 만들 수 있다.
+App Store Connect의 "앱 심사 정보 → 로그인 정보"에도 같은 계정을 쓴다. 실제 이용자 계정은 심사용으로 쓰지 않는다.
+비밀번호를 바꾸거나 다시 만들려면 스크립트를 다시 돌리면 된다(있으면 비밀번호만 초기화).
 
 ## 2. 광고
 **아니요, 앱에 광고가 없습니다.**
