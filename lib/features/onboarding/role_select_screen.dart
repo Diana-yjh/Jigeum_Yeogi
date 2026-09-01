@@ -40,7 +40,7 @@ class RoleSelectScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpace.md),
-              Text('지금여기', style: AppText.display.copyWith(fontSize: 36)),
+              Text('오늘출석', style: AppText.display.copyWith(fontSize: 36)),
               const SizedBox(height: AppSpace.sm),
               const Text(
                 '우리 아이가 학원에 잘 도착했는지\n실시간으로 안심하세요',

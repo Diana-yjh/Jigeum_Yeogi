@@ -16,7 +16,7 @@ class JigeumYeogiApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '지금여기',
+      title: '오늘출석',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       // 글씨를 전체적으로 키운다(시스템 접근성 배율 위에 12% 기본 확대).

@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// 지금여기 Firestore 보안 규칙 (Phase 2 초안)
+// 오늘출석 Firestore 보안 규칙 (Phase 2 초안)
 // 원칙:
 // - 학부모는 자기 자녀(students.parentUid == 본인)의 데이터만 읽기
 // - 선생님은 자기 teacherCode 소속 학생/기록만 읽기·쓰기

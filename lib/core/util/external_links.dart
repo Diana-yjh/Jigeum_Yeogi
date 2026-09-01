@@ -15,7 +15,7 @@ abstract class ExternalLinks {
   static final support = Uri(
     scheme: 'mailto',
     path: 'devyjhong@gmail.com',
-    queryParameters: {'subject': '[지금여기] 문의'},
+    queryParameters: {'subject': '[오늘출석] 문의'},
   );
 }
 

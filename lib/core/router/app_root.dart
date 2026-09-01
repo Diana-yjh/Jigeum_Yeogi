@@ -18,7 +18,7 @@ class AppRoot extends ConsumerWidget {
     final authAsync = ref.watch(authStateProvider);
 
     return authAsync.when(
-      loading: () => const SplashScreen(message: '지금여기'),
+      loading: () => const SplashScreen(message: '오늘출석'),
       error: (_, _) =>
           const SplashScreen(message: '연결에 문제가 있어요. 앱을 다시 실행해주세요.'),
       data: (authUser) {

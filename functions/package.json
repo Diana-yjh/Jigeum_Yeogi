@@ -1,6 +1,6 @@
 {
   "name": "functions",
-  "description": "지금여기 Cloud Functions (등하원 FCM 발송)",
+  "description": "오늘출석 Cloud Functions (등하원 FCM 발송)",
   "private": true,
   "main": "index.js",
   "engines": {

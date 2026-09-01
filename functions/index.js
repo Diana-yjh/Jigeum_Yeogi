@@ -1,4 +1,4 @@
-// 지금여기 — 등하원 시 학부모에게 FCM 푸시 발송.
+// 오늘출석 — 등하원 시 학부모에게 FCM 푸시 발송.
 // attendance/{studentId}_{date} 문서의 checkInAt/checkOutAt 변화를 감지해
 // 해당 학생의 학부모(users.fcmToken)에게 알림을 보낸다.
 

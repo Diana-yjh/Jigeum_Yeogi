@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="지금여기"
+        android:label="오늘출석"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

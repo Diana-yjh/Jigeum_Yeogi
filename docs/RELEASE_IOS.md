@@ -8,7 +8,7 @@ App Store(TestFlight 포함) 배포를 위한 준비 항목. 코드로 처리한
 
 | 항목 | 처리 내용 | 파일 |
 |------|-----------|------|
-| 앱 표시 이름 | `Jigeum Yeogi` → **지금여기** (`CFBundleDisplayName`·`CFBundleName`) | `ios/Runner/Info.plist` |
+| 앱 표시 이름 | `Jigeum Yeogi` → **오늘출석** (`CFBundleDisplayName`·`CFBundleName`) | `ios/Runner/Info.plist` |
 | 기본 언어 | `CFBundleDevelopmentRegion = ko`, `CFBundleLocalizations = [ko]` | `ios/Runner/Info.plist` |
 | 수출 규정(암호화) | `ITSAppUsesNonExemptEncryption = false` — 업로드마다 뜨던 수동 질문 제거 | `ios/Runner/Info.plist` |
 | 화면 방향 | 세로 전용 고정 (iPhone·iPad 모두) + `UIRequiresFullScreen=true` — iPad 멀티태스킹 미지원 선언. 이게 없으면 업로드 검증(90474)에서 4방향을 요구한다 | `ios/Runner/Info.plist` |
@@ -21,7 +21,7 @@ App Store(TestFlight 포함) 배포를 위한 준비 항목. 코드로 처리한
 | Android 아이콘 | adaptive icon — 배경 `#F8815D` + 전경(핀만 추출, 안전 영역 62%) | `assets/icon/app_icon_foreground.png` → `android/app/src/main/res/` |
 | 앱 설명 | `pubspec.yaml` 기본 문구 → 실제 설명 | `pubspec.yaml` |
 | 스모크 테스트 | 로그인 우선 진입 개편에 맞게 갱신(기존 실패 상태였음) | `test/widget_test.dart` |
-| Android 매니페스트 | 표시 이름 `지금여기`, 세로 고정(`screenOrientation=portrait`) | `android/app/src/main/AndroidManifest.xml` |
+| Android 매니페스트 | 표시 이름 `오늘출석`, 세로 고정(`screenOrientation=portrait`) | `android/app/src/main/AndroidManifest.xml` |
 | Android 런치 스플래시 | iOS와 동일하게 배경 `#FAF7F2` + 로고 120dp. 다크 모드에서도 라이트 유지 | `res/drawable*/launch_background.xml`, `res/values*/styles.xml`, `res/values/colors.xml` |
 | 계정 삭제 안내 페이지 | Play 데이터 안전 섹션이 요구하는 웹 URL | `docs/account-deletion/index.html` |
 
@@ -34,8 +34,8 @@ iOS 아이콘은 알파 채널·둥근 모서리가 있으면 심사에서 거�
 
 | 앱 | 번들 ID / 패키지명 | 용도 |
 |----|-------------------|------|
-| `지금여기 (iOS)` | `com.diana.jigeumYeogi` | iOS 배포. APNs 키 업로드 완료 |
-| `지금여기 (Android)` | `com.diana.jigeumYeogi` | Android 배포 |
+| `오늘출석 (iOS)` | `com.diana.jigeumYeogi` | iOS 배포. APNs 키 업로드 완료 |
+| `오늘출석 (Android)` | `com.diana.jigeumYeogi` | Android 배포 |
 
 설정 파일은 모두 `.gitignore` 대상이라 clone 후 재생성이 필요하다:
 ```
@@ -55,7 +55,7 @@ flutterfire configure --project=jigeum-yeogi-25737 \
 ## 남은 작업 (배포 전 필수)
 
 ### 1. APNs 인증키 ✅ 완료
-`AuthKey_Z6A3BQKQC2.p8`을 Firebase `지금여기 (iOS)` 앱에 업로드했다(2026-08-31). TestFlight 빌드에서 등하원 푸시 검증 가능.
+`AuthKey_Z6A3BQKQC2.p8`을 Firebase `오늘출석 (iOS)` 앱에 업로드했다(2026-08-31). TestFlight 빌드에서 등하원 푸시 검증 가능.
 
 ### 2. Android — Play 배포
 
@@ -70,7 +70,7 @@ flutterfire configure --project=jigeum-yeogi-25737 \
 Play는 **앱 서명 키를 Google이 관리**(Play App Signing)하고, 이 키스토어는 "업로드 키"가 된다. 첫 업로드 때 Play Console이 자동으로 등록한다.
 
 #### 2-2. Play Console 준비물
-- [ ] Google Play 개발자 계정 (1회 $25) → **앱 만들기** (이름 지금여기, 기본 언어 한국어, 앱, 무료)
+- [ ] Google Play 개발자 계정 (1회 $25) → **앱 만들기** (이름 오늘출석, 기본 언어 한국어, 앱, 무료)
 - [ ] **개인정보처리방침 URL**: `https://diana-yjh.github.io/Jigeum_Yeogi/privacy/`
 - [ ] **계정 삭제 URL** (데이터 안전 → 계정 삭제 요구사항): `https://diana-yjh.github.io/Jigeum_Yeogi/account-deletion/`
 - [ ] **데이터 안전 설문** — 수집: 이메일·이름·사용자 ID·앱 활동(출결). 공유 없음, 전송 암호화, 삭제 요청 가능. `PrivacyInfo.xcprivacy`와 같은 내용
@@ -100,16 +100,16 @@ Play Console → 테스트 → **내부 테스트** → 새 버전 만들기 →
 ## 빌드·업로드
 
 ```bash
-flutter build ipa --release          # build/ios/ipa/지금여기.ipa
+flutter build ipa --release          # build/ios/ipa/오늘출석.ipa
 ```
 
 업로드(App Store Connect API 키 사용, 발급 완료):
 
 ```bash
 # 검증 → 업로드. 키 파일은 ~/.appstoreconnect/private_keys/AuthKey_U2JSBK9MC7.p8 (gitignore 밖, 이 Mac에만 있음)
-xcrun altool --validate-app --type ios -f build/ios/ipa/지금여기.ipa \
+xcrun altool --validate-app --type ios -f build/ios/ipa/오늘출석.ipa \
   --apiKey U2JSBK9MC7 --apiIssuer 750c4f01-77df-4f2f-ace6-b2a1eaee618d
-xcrun altool --upload-app   --type ios -f build/ios/ipa/지금여기.ipa \
+xcrun altool --upload-app   --type ios -f build/ios/ipa/오늘출석.ipa \
   --apiKey U2JSBK9MC7 --apiIssuer 750c4f01-77df-4f2f-ace6-b2a1eaee618d
 ```
 
@@ -128,11 +128,11 @@ xcrun altool --upload-app   --type ios -f build/ios/ipa/지금여기.ipa \
 ### 검증 완료 기록
 - **TestFlight 업로드 성공 (2026-08-31)** — 1.0.0 (2), Delivery UUID `261d2514-e178-43fd-9356-d334e9b07347` (알림함·이름 수정·다자녀 달력·배경·오전/오후 표기 포함)
 - TestFlight 업로드 성공 (2026-08-31) — 1.0.0 (1), Delivery UUID `77ac7bc4-a819-4ea0-8dee-9a6f831013b0`
-- **`flutter build ipa --release` 성공 → `build/ios/ipa/지금여기.ipa` (30MB)**
+- **`flutter build ipa --release` 성공 → `build/ios/ipa/오늘출석.ipa` (30MB)**
   - 서명: `Apple Distribution: YeJin Hong (283MVWC922)`
   - 프로파일: `iOS Team Store Provisioning Profile: com.diana.jigeumYeogi`
   - 엔타이틀먼트: `aps-environment = production`, `get-task-allow = false`, `beta-reports-active = true`(TestFlight)
 - `flutter build ios --release --no-codesign` 성공 (Runner.app 44.0MB)
-- 산출물 확인: 번들 ID `com.diana.jigeumYeogi`, 표시 이름 `지금여기`, 세로 전용, `ITSAppUsesNonExemptEncryption=false`, `PrivacyInfo.xcprivacy` 번들 포함, AppIcon·LaunchImage 자산 카탈로그 반영
+- 산출물 확인: 번들 ID `com.diana.jigeumYeogi`, 표시 이름 `오늘출석`, 세로 전용, `ITSAppUsesNonExemptEncryption=false`, `PrivacyInfo.xcprivacy` 번들 포함, AppIcon·LaunchImage 자산 카탈로그 반영
 - `flutter build apk --release` 성공 — APK 패키지명 `com.diana.jigeumYeogi`, minSdk 24, adaptive icon 반영
 - `flutter analyze` 이슈 0 / `flutter test` 통과
