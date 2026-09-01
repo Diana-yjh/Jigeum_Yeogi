@@ -439,6 +439,8 @@ class _WeekCard extends StatelessWidget {
     final isPast = date.isBefore(today);
     final isToday = date == today;
 
+    // 원은 "수업이 있는 날"에만 그린다 — 그래야 원 개수가 주당 수업 횟수와 같다.
+    // 채워진 원은 출석 하나뿐. 안 온 날은 빈 원 + ×, 오늘은 라벨 색으로만 구분.
     Widget circle;
     Color labelColor = AppColors.textSub;
     if (attended) {
@@ -446,19 +448,19 @@ class _WeekCard extends StatelessWidget {
           bg: AppColors.primary,
           child: const Icon(Icons.check, size: 15, color: Colors.white));
       labelColor = AppColors.primaryDeep;
-    } else if (isToday) {
+    } else if (isScheduled && isToday) {
       circle = _circle(border: Border.all(color: AppColors.primary, width: 2));
       labelColor = AppColors.primaryDeep;
     } else if (isScheduled && isPast) {
       circle = _circle(
-          bg: AppColors.chipNeutral,
-          child: Text('—',
-              style: AppText.caption.copyWith(color: AppColors.textFaint)));
+          border: Border.all(color: AppColors.cardBorder, width: 1.5),
+          child: const Icon(Icons.close, size: 13, color: AppColors.textFaint));
     } else if (isScheduled) {
       circle =
           _circle(border: Border.all(color: AppColors.cardBorder, width: 1.5));
     } else {
       circle = const SizedBox(width: 30, height: 30);
+      if (isToday) labelColor = AppColors.primaryDeep;
     }
 
     return Column(

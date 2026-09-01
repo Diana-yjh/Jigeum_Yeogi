@@ -84,10 +84,12 @@
 `AppCard`.
 - 1행: 좌 `이번 주` 14 / w600, 우 `1 / 3회` 12 textSecondary. 분모는 이번 주 수업 예정 일수(스케줄 데이터 없으면 분모 생략하고 `1회`만).
 - 2행: 월~일 7칸 `Row(mainAxisAlignment: spaceBetween)`. 각 칸은 요일 라벨 12 + 아래 지름 22 원.
-  - 출석한 날: 원 배경 primary, 흰 체크 아이콘 12. 요일 라벨도 primary.
-  - 지난 날인데 출석 없음: 원 배경 divider, 가운데 `—` textMuted
-  - 아직 안 온 날(예정): 원 테두리 1 dashed dividerStrong, 안은 비움
-  - 일요일처럼 수업 없는 날: 원 없이 비움
+  - **원은 수업이 있는 날에만 그린다** — 원 개수 = 주당 수업 횟수. 채워진 원은 출석 하나뿐이다.
+  - 출석한 날: 원 배경 primary, 흰 체크 아이콘. 요일 라벨도 primaryDeep.
+  - 오늘이 수업일이고 아직 등원 전: primary 테두리 2, 안은 비움. 라벨 primaryDeep.
+  - 지난 수업일인데 출석 없음: cardBorder 테두리 빈 원 + 가운데 `×` textFaint. (채운 회색 원은 "체크됨"으로 오독된다)
+  - 아직 안 온 수업일: cardBorder 테두리 빈 원.
+  - 수업 없는 날: 원 없음. 오늘이면 라벨만 primaryDeep.
 - 주 시작은 월요일.
 
 ### 자녀가 여러 명일 때
