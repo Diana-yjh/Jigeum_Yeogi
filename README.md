@@ -19,31 +19,25 @@
 
 <table>
   <tr>
-    <td width="50%" align="center">
-      <img src="docs/images/teacher_attendance.jpg" alt="(선생님) 오늘의 출석 관리" width="380"><br>
-      <b>🍎 (선생님) 오늘의 출석 관리</b><br>
-      아이들의 출결을 손쉽게 관리할 수 있어요.<br>
-      시간대별 그룹핑, 등원·하원 원터치 체크.
+    <td width="25%" align="center">
+      <img src="docs/images/teacher_attendance.jpg" alt="(선생님) 오늘의 출석 관리"><br>
+      <b>🍎 (선생님)<br>오늘의 출석 관리</b><br>
+      <sub>아이들의 출결을<br>손쉽게 관리할 수 있어요</sub>
     </td>
-    <td width="50%" align="center">
-      <img src="docs/images/teacher_schedule.jpg" alt="(선생님) 학생별 스케줄 설정" width="380"><br>
-      <b>🗓️ (선생님) 학생별 스케줄 설정</b><br>
-      수업시간을 간편하게 설정할 수 있어요.<br>
-      요일·시간(30분 단위)과 정규/보충 구분.
+    <td width="25%" align="center">
+      <img src="docs/images/teacher_schedule.jpg" alt="(선생님) 학생별 스케줄 설정"><br>
+      <b>🗓️ (선생님)<br>학생별 스케줄 설정</b><br>
+      <sub>수업시간을 간편하게<br>설정할 수 있어요</sub>
     </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/images/parent_home.jpg" alt="(학부모) 아이의 출석 확인" width="380"><br>
-      <b>🏠 (학부모) 아이의 출석 확인</b><br>
-      아이의 오늘 하루를 한눈에 확인할 수 있어요.<br>
-      등하원 타임라인·체류 시간·이번 주 출석.
+    <td width="25%" align="center">
+      <img src="docs/images/parent_home.jpg" alt="(학부모) 아이의 출석 확인"><br>
+      <b>🏠 (학부모)<br>아이의 출석 확인</b><br>
+      <sub>아이의 오늘 하루를<br>한눈에 확인할 수 있어요</sub>
     </td>
-    <td align="center">
-      <img src="docs/images/parent_alerts.jpg" alt="(학부모) 출석 알람" width="380"><br>
-      <b>🔔 (학부모) 출석 알람</b><br>
-      아이의 출결 알람을 시간대별로 모아서 확인할 수 있어요.<br>
-      등원·하원 순간 푸시, 지난 알림은 알림함에서.
+    <td width="25%" align="center">
+      <img src="docs/images/parent_alerts.jpg" alt="(학부모) 출석 알람"><br>
+      <b>🔔 (학부모)<br>출석 알람</b><br>
+      <sub>아이의 출결 알람을 시간대별로<br>모아서 확인할 수 있어요</sub>
     </td>
   </tr>
 </table>
