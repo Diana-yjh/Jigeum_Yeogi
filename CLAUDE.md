@@ -4,12 +4,14 @@
 
 ## 프로젝트 개요
 
-학원 출결 관리 앱. 선생님은 여러 학생의 등원/하원을 체크하고, 학부모는 내 아이 한 명의 출결 상태와 달력을 확인한다. 핵심 가치는 "안심" - 학부모는 아이가 학원에 잘 도착했는지 즉시 알 수 있어야 한다.
+**오늘출석** — 학원 출결 관리 앱. 선생님은 여러 학생의 등원/하원을 체크하고, 학부모는 아이의 출결 상태와 달력을 확인한다. 핵심 가치는 "안심" - 학부모는 아이가 학원에 잘 도착했는지 즉시 알 수 있어야 한다. (표시 이름만 오늘출석이고, 번들 ID `com.diana.jigeumYeogi`·저장소명·Firebase 프로젝트 ID는 옛 이름 기준 — 바꾸지 않는다.)
 
 - 사용자 역할: teacher(선생님), parent(학부모) - 로그인 시 선택하며 화면 트리가 완전히 분리됨
 - 선생님: 이메일 로그인 → 오늘 등원 예정 화면(홈), 오늘 출석, 스케줄(주간 편집/월간 보기), 설정(6자리 선생님 코드 확인)
-- 학부모: 선생님 코드(6자리 불변) + 자녀 이름으로 회원가입, 이메일 로그인 → 내 아이 출결 화면(홈), 달력, 설정
+- 학부모: 선생님 코드(6자리) + 자녀 이름으로 회원가입, 이메일 로그인 → 아이 출결 화면(홈), 달력, 알림함, 설정
+- **다자녀 지원**: 홈은 아이별 좌우 스와이프 페이저, 달력은 한 달력에 아이별 색(`AppColors.childColor`), 설정에서 아이 추가/삭제/이름 수정
 - 출결 상태: 등원 전(pending) / 등원(present) / 하원(등원·하원 시각 기록) / 결석 예정(expected_absent)
+- 시각 표기는 앱 전역 오전/오후(`clock()` = "오후 3:02")
 
 ## 기술 스택
 
@@ -41,7 +43,8 @@ lib/
     attendance/             # 출석 체크 (data/state/widgets/models)
     calendar/               # 학부모·선생님 달력
     schedule/               # 선생님 스케줄 (요일+시간)
-    settings/               # 설정
+    settings/               # 설정 (이름 수정, 아이 관리, 링크, 회원탈퇴)
+    notifications/          # 학부모 알림함 (attendance 파생, 별도 컬렉션 없음)
     shell/                  # 역할별 하단 탭 셸
   shared/widgets/           # 역할 공용 위젯(splash, placeholder 등)
 ```
@@ -66,6 +69,8 @@ lib/
 
 - 색상은 `AppColors`의 토큰만 사용. 위젯 안에서 `Color(0xFF...)`나 `Colors.orange`를 직접 쓰지 않는다. 배경은 화이트/베이지, primary는 오렌지 계열 — 새 색이 필요하면 토큰을 먼저 추가하고 사용한다.
 - 간격·모서리·글자 스타일도 토큰만 사용: `AppSpace`(간격), `AppRadius`(모서리), `AppText`(글자 스타일). 모두 `lib/core/theme/`에 정의.
+- 화면에는 `Scaffold` 대신 **`AppScaffold`**(`shared/widgets/app_background.dart`)를 쓴다 — 공용 배경(파스텔 번짐 + 도트)을 그린다. AppBar를 얹으면 `backgroundColor: Colors.transparent`.
+- 글씨 확대 대응: 시스템 배율은 0.9~1.3으로 clamp(`app.dart`) 위에 1.12를 곱한다. 고정 크기 위젯은 배율 1.3에서 넘치지 않는지 확인한다(달력 셀은 `CalendarDayNumber` 참고).
 - 주석·커밋 메시지·문서는 모두 한국어로 작성한다. 커밋 메시지 예: `feat: 출석 필터 칩 컴포넌트 분리`
 - 위젯 파일이 200줄을 넘으면 분리를 고려한다. 재사용되는 위젯은 `shared/widgets/`로 옮긴다.
 - Firestore 접근 코드는 `data/` 레이어의 Repository 클래스에만 둔다. 화면에서 `FirebaseFirestore.instance`를 직접 호출하지 않는다.
@@ -81,8 +86,9 @@ flutter run                   # 디버그 실행 (실행 중 r: hot reload, R: h
 flutter analyze               # 정적 분석 — 커밋 전 반드시 경고 0개 확인
 dart format lib/              # 포맷팅
 flutter test                  # 테스트
-flutter build ios --release   # iOS 빌드 (주 테스트 대상)
-flutter build apk --release   # 안드로이드 빌드
+flutter build ipa --release        # iOS 배포(.ipa) — 업로드 절차는 docs/RELEASE_IOS.md
+flutter build appbundle --release  # Play 업로드용 AAB (android/key.properties 있으면 릴리즈 서명)
+flutter build apk --release        # 기기 직접 설치용
 
 firebase deploy --only firestore:rules    # 보안 규칙 배포
 firebase deploy --only firestore:indexes  # 인덱스 배포
@@ -99,4 +105,7 @@ firebase deploy --only firestore:indexes  # 인덱스 배포
 - 선생님 코드는 불변이다. 코드를 재생성하거나 변경하는 기능은 만들지 않는다.
 - 작업 전에 관련 feature 폴더를 먼저 읽고 기존 패턴을 따른다. 큰 구조 변경은 계획을 먼저 제시하고 확인받은 뒤 진행한다.
 - 채팅 기능은 요청으로 제거됨 — 다시 추가하지 않는다.
-- FCM 푸시: 등하원 시 학부모 알림. 발송은 Cloud Functions(`functions/`)에서만, 클라이언트는 토큰 저장·수신 처리만.
+- FCM 푸시: 등하원 시 학부모 알림. 발송은 Cloud Functions(`functions/`)에서만, 클라이언트는 토큰 저장·수신 처리만. 알림함 문구는 `functions/index.js` 발송 문구와 일치시킨다.
+- 재업로드 시 `pubspec.yaml` 빌드 번호(`+N`)를 올린다. 배포 체크리스트·계정 작업은 `docs/RELEASE_IOS.md`, Play 설문 답안은 `docs/PLAY_CONSOLE.md`.
+- 운영 데이터 스크립트(`functions/scripts/`): 더미 출결 생성/삭제, 심사용 계정 생성. 서비스 계정 키는 저장소 밖 `~/.config/jigeum/serviceAccount.json`.
+- 개인정보처리방침·계정 삭제 페이지는 `docs/privacy/`·`docs/account-deletion/`(GitHub Pages로 서빙). 수집 항목·삭제 동작을 바꾸면 함께 갱신한다.
