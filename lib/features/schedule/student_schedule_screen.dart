@@ -5,6 +5,7 @@ import 'package:jigeum_yeogi/core/theme/app_decorations.dart';
 import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
+import 'package:jigeum_yeogi/features/auth/state/auth_providers.dart';
 import 'package:jigeum_yeogi/features/schedule/state/schedule_providers.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
 import 'package:jigeum_yeogi/models/student.dart';
@@ -74,6 +75,51 @@ class _StudentScheduleScreenState
     }
   }
 
+  /// 학생 삭제 — 학부모 앱에서도 사라지고 출결 기록도 함께 삭제된다.
+  Future<void> _confirmDelete() async {
+    final name = widget.student.name;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$name 학생 삭제'),
+        content: const Text('학생을 반에서 삭제할까요?\n'
+            '학부모 앱에서도 아이가 사라지고, 출결 기록도 함께 삭제됩니다.\n'
+            '이 작업은 되돌릴 수 없어요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      // 학부모의 자녀 삭제와 같은 경로 — 출결 기록은 Cloud Functions가 정리.
+      await ref.read(authRepositoryProvider).deleteChild(widget.student.id);
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$name 학생을 삭제했어요.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('삭제 중 문제가 발생했어요.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -82,6 +128,13 @@ class _StudentScheduleScreenState
         elevation: 0,
         foregroundColor: AppColors.textMain,
         title: Text('${widget.student.name} 스케줄'),
+        actions: [
+          IconButton(
+            tooltip: '학생 삭제',
+            icon: const Icon(Icons.delete_outline, color: AppColors.textSub),
+            onPressed: _saving ? null : _confirmDelete,
+          ),
+        ],
       ),
       body: SafeArea(
         child: ListView(

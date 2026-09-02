@@ -71,7 +71,8 @@ class AuthRepository {
         .set({'name': name.trim()}, SetOptions(merge: true));
   }
 
-  /// 자녀(학생) 삭제. 출결 기록은 Cloud Functions(onStudentDelete)가 정리.
+  /// 학생 삭제 — 학부모(내 자녀)·선생님(내 반 학생) 공용.
+  /// 출결 기록은 Cloud Functions(onStudentDelete)가 정리.
   Future<void> deleteChild(String studentId) {
     return _db.collection('students').doc(studentId).delete();
   }
