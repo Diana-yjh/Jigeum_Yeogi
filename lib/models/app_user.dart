@@ -12,6 +12,7 @@ class AppUser {
   final bool notifyCheckIn; // 등원 알림 (기본 on)
   final bool notifyCheckOut; // 하원 알림 (기본 on)
   final DateTime? notificationsSeenAt; // 알림함을 마지막으로 연 시각(읽음 기준)
+  final Map<String, String> teachers; // 학부모: 연결된 선생님 {코드: 닉네임}
 
   const AppUser({
     required this.uid,
@@ -23,6 +24,7 @@ class AppUser {
     this.notifyCheckIn = true,
     this.notifyCheckOut = true,
     this.notificationsSeenAt,
+    this.teachers = const {},
   });
 
   factory AppUser.fromMap(String uid, Map<String, dynamic> map) {
@@ -37,6 +39,10 @@ class AppUser {
       notifyCheckOut: (map['notifyCheckOut'] as bool?) ?? true,
       notificationsSeenAt:
           (map['notificationsSeenAt'] as Timestamp?)?.toDate(),
+      teachers: {
+        for (final e in ((map['teachers'] as Map?) ?? const {}).entries)
+          e.key as String: (e.value ?? '선생님') as String,
+      },
     );
   }
 
@@ -49,5 +55,6 @@ class AppUser {
         'email': email,
         if (teacherCode != null) 'teacherCode': teacherCode,
         if (fcmToken != null) 'fcmToken': fcmToken,
+        if (teachers.isNotEmpty) 'teachers': teachers,
       };
 }

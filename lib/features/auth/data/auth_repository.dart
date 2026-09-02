@@ -76,24 +76,37 @@ class AuthRepository {
     return _db.collection('students').doc(studentId).delete();
   }
 
-  /// 학부모의 선생님 코드 변경. 기존 자녀는 모두 삭제(다른 반으로 전환).
-  Future<void> changeParentTeacherCode({
+  /// 학부모가 선생님을 추가로 연결. 코드 검증 후 닉네임과 함께 저장.
+  Future<void> addTeacher({
     required String uid,
-    required String newCode,
-    required List<String> childIds,
+    required String code,
+    required String nickname,
   }) async {
-    final code = newCode.trim();
-    final teacherDoc = await _db.collection('teachers').doc(code).get();
+    final trimmed = code.trim();
+    final teacherDoc = await _db.collection('teachers').doc(trimmed).get();
     if (!teacherDoc.exists) {
       throw const AuthFailure('선생님 코드를 찾을 수 없어요. 코드를 다시 확인해주세요.');
     }
-    final batch = _db.batch();
-    for (final id in childIds) {
-      batch.delete(_db.collection('students').doc(id));
-    }
-    batch.set(_db.collection('users').doc(uid), {'teacherCode': code},
-        SetOptions(merge: true));
-    await batch.commit();
+    await _db.collection('users').doc(uid).set({
+      'teachers': {
+        trimmed: nickname.trim().isEmpty ? '선생님' : nickname.trim(),
+      },
+    }, SetOptions(merge: true));
+  }
+
+  /// 연결된 선생님의 닉네임 변경.
+  Future<void> renameTeacher(String uid, String code, String nickname) {
+    return _db.collection('users').doc(uid).set({
+      'teachers': {code: nickname.trim()},
+    }, SetOptions(merge: true));
+  }
+
+  /// 선생님 연결 해제. 그 선생님 소속 자녀가 있으면 화면에서 먼저 막는다.
+  Future<void> removeTeacher(String uid, String code) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .update({'teachers.$code': FieldValue.delete()});
   }
 
   /// 회원탈퇴 — Auth 계정 삭제. Firestore 데이터는 Cloud Functions가 정리.
@@ -161,7 +174,8 @@ class AuthRepository {
         'role': 'parent',
         'name': name.trim(),
         'email': email.trim(),
-        'teacherCode': code, // 학부모가 연결된 선생님 코드(유지·수정용)
+        'teacherCode': code, // 첫 선생님 코드(구버전 호환)
+        'teachers': {code: '선생님'}, // 연결된 선생님 {코드: 닉네임}
         'createdAt': FieldValue.serverTimestamp(),
       });
       final studentRef = _db.collection('students').doc();

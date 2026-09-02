@@ -191,12 +191,17 @@ class _ParentSettings extends ConsumerWidget {
       });
     }
 
-    // 학부모의 선생님 코드(계정에 저장, 없으면 자녀 코드로 폴백).
-    final code = user.teacherCode ??
-        (children.isNotEmpty ? children.first.teacherCode : null);
-    final childIds = children.map((c) => c.id).toList();
+    // 연결된 선생님 {코드: 닉네임}. 저장된 맵 + (구버전 호환) 계정 코드·자녀 코드 병합.
+    final teachers = <String, String>{...user.teachers};
+    final legacyCodes = [
+      if (user.teacherCode != null) user.teacherCode!,
+      ...children.map((c) => c.teacherCode),
+    ];
+    for (final c in legacyCodes) {
+      teachers.putIfAbsent(c, () => '선생님');
+    }
 
-    // 우리 아이 섹션 행: 자녀 이름(+삭제) → 아이 추가.
+    // 우리 아이 섹션 행: 자녀 이름(+선생님 닉네임, 수정·삭제) → 아이 추가.
     final childRows = <Widget>[];
     if (children.isEmpty) {
       childRows.add(_childRow('연결된 자녀 없음'));
@@ -204,6 +209,8 @@ class _ParentSettings extends ConsumerWidget {
       for (final c in children) {
         childRows.add(_childRow(
           c.name,
+          // 선생님이 여럿일 때만 누구 반인지 표시.
+          caption: teachers.length >= 2 ? teachers[c.teacherCode] : null,
           onEdit: () => showDialog(
             context: context,
             builder: (_) => EditNameDialog(
@@ -218,7 +225,7 @@ class _ParentSettings extends ConsumerWidget {
         ));
       }
     }
-    childRows.add(_addChildRow(context, ref, user.uid, code));
+    childRows.add(_addChildRow(context, ref, user.uid, teachers));
 
     return AppScaffold(
       body: SafeArea(
@@ -232,8 +239,9 @@ class _ParentSettings extends ConsumerWidget {
                     color: AppColors.textMain)),
             const SizedBox(height: AppSpace.md),
             _profileCard(context, ref, user),
-            const SizedBox(height: AppSpace.sm),
-            _codeCard(context, ref, user.uid, code, childIds),
+            const SizedBox(height: AppSpace.md),
+            const _SectionLabel('선생님'),
+            _RowsCard(_teacherRows(context, ref, user.uid, teachers, children)),
             const SizedBox(height: AppSpace.md),
             const _SectionLabel('우리 아이'),
             _RowsCard(childRows),
@@ -308,48 +316,119 @@ class _ParentSettings extends ConsumerWidget {
     );
   }
 
-  /// 선생님 코드 카드 — 항상 표시, 탭하면 복사, 연필로 수정.
-  Widget _codeCard(BuildContext context, WidgetRef ref, String uid,
-      String? code, List<String> childIds) {
-    final display = code ?? '------';
-    return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpace.md, vertical: AppSpace.sm),
-      decoration: AppDecoration.card(),
-      child: Row(
-        children: [
-          const Text('선생님 코드', style: AppText.body),
-          const Spacer(),
-          GestureDetector(
-            onTap: code == null
-                ? null
-                : () {
-                    Clipboard.setData(ClipboardData(text: code));
-                    _snack(context, '복사했어요');
-                  },
-            child: Text(display,
-                style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 14,
-                    color: AppColors.primaryDeep,
-                    letterSpacing: 2)),
-          ),
-          const SizedBox(width: AppSpace.sm),
-          GestureDetector(
-            onTap: () => showDialog(
-              context: context,
-              builder: (_) =>
-                  _ChangeCodeDialog(uid: uid, childIds: childIds),
+  /// 선생님 섹션 행들 — 연결된 선생님(닉네임·코드·수정·해제) + 선생님 추가.
+  List<Widget> _teacherRows(BuildContext context, WidgetRef ref, String uid,
+      Map<String, String> teachers, List<Student> children) {
+    final rows = <Widget>[];
+    for (final e in teachers.entries) {
+      final code = e.key;
+      final hasChildren = children.any((c) => c.teacherCode == code);
+      rows.add(SizedBox(
+        height: 44,
+        child: Row(
+          children: [
+            const Icon(Icons.school_outlined,
+                size: 20, color: AppColors.primaryDeep),
+            const SizedBox(width: AppSpace.sm),
+            Expanded(
+              child: Text(e.value,
+                  style: AppText.body, overflow: TextOverflow.ellipsis),
             ),
-            child: const Icon(Icons.edit_outlined,
-                size: 18, color: AppColors.textFaint),
+            // 코드 — 탭하면 복사.
+            GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: code));
+                _snack(context, '복사했어요');
+              },
+              child: Text(code,
+                  style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 14,
+                      color: AppColors.primaryDeep,
+                      letterSpacing: 2)),
+            ),
+            GestureDetector(
+              onTap: () => showDialog(
+                context: context,
+                builder: (_) => EditNameDialog(
+                  title: '선생님 닉네임',
+                  label: '닉네임 (예: 수학 김선생님)',
+                  initial: e.value,
+                  onSubmit: (nick) => ref
+                      .read(authRepositoryProvider)
+                      .renameTeacher(uid, code, nick),
+                ),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpace.sm),
+                child: Icon(Icons.edit_outlined,
+                    size: 18, color: AppColors.textFaint),
+              ),
+            ),
+            GestureDetector(
+              onTap: () =>
+                  _confirmRemoveTeacher(context, ref, uid, code, hasChildren),
+              child: const Icon(Icons.link_off,
+                  size: 20, color: AppColors.textFaint),
+            ),
+          ],
+        ),
+      ));
+    }
+    rows.add(InkWell(
+      onTap: () => showDialog(
+        context: context,
+        builder: (_) => _AddTeacherDialog(uid: uid),
+      ),
+      child: const SizedBox(
+        height: 44,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('선생님 추가', style: AppText.body),
+            Icon(Icons.add, size: 20, color: AppColors.textFaint),
+          ],
+        ),
+      ),
+    ));
+    return rows;
+  }
+
+  /// 선생님 연결 해제 확인 — 그 반 자녀가 남아 있으면 막는다.
+  Future<void> _confirmRemoveTeacher(BuildContext context, WidgetRef ref,
+      String uid, String code, bool hasChildren) async {
+    if (hasChildren) {
+      _snack(context, '이 선생님 반에 아이가 있어요. 아이를 먼저 삭제하거나 옮겨주세요.');
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('선생님 연결 해제'),
+        content: Text('코드 $code 선생님과의 연결을 해제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('해제'),
           ),
         ],
       ),
     );
+    if (ok != true) return;
+    try {
+      await ref.read(authRepositoryProvider).removeTeacher(uid, code);
+    } catch (_) {
+      if (context.mounted) _snack(context, '해제 중 문제가 발생했어요.');
+    }
   }
 
-  Widget _childRow(String name, {VoidCallback? onEdit, VoidCallback? onDelete}) {
+  Widget _childRow(String name,
+      {String? caption, VoidCallback? onEdit, VoidCallback? onDelete}) {
     return SizedBox(
       height: 44,
       child: Row(
@@ -361,7 +440,23 @@ class _ParentSettings extends ConsumerWidget {
                 style: AppText.caption.copyWith(color: AppColors.primaryDeep)),
           ),
           const SizedBox(width: AppSpace.sm),
-          Expanded(child: Text(name, style: AppText.body)),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child:
+                      Text(name, style: AppText.body, overflow: TextOverflow.ellipsis),
+                ),
+                if (caption != null) ...[
+                  const SizedBox(width: AppSpace.sm),
+                  Flexible(
+                    child: Text(caption,
+                        style: AppText.caption, overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ],
+            ),
+          ),
           if (onEdit != null)
             GestureDetector(
               onTap: onEdit,
@@ -383,12 +478,12 @@ class _ParentSettings extends ConsumerWidget {
   }
 
 
-  Widget _addChildRow(
-      BuildContext context, WidgetRef ref, String uid, String? autoCode) {
+  Widget _addChildRow(BuildContext context, WidgetRef ref, String uid,
+      Map<String, String> teachers) {
     return InkWell(
       onTap: () => showDialog(
         context: context,
-        builder: (_) => _AddChildDialog(uid: uid, teacherCode: autoCode),
+        builder: (_) => _AddChildDialog(uid: uid, teachers: teachers),
       ),
       child: const SizedBox(
         height: 44,
@@ -582,97 +677,11 @@ class _TeacherCodeCard extends StatelessWidget {
 }
 
 /// 선생님 코드 변경 다이얼로그 — 변경 시 등록된 학생이 모두 삭제됨.
-class _ChangeCodeDialog extends ConsumerStatefulWidget {
-  final String uid;
-  final List<String> childIds;
-  const _ChangeCodeDialog({required this.uid, required this.childIds});
-
-  @override
-  ConsumerState<_ChangeCodeDialog> createState() => _ChangeCodeDialogState();
-}
-
-class _ChangeCodeDialogState extends ConsumerState<_ChangeCodeDialog> {
-  final _code = TextEditingController();
-  bool _saving = false;
-
-  @override
-  void dispose() {
-    _code.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (_code.text.trim().length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('6자리 코드를 입력해주세요.')));
-      return;
-    }
-    setState(() => _saving = true);
-    try {
-      await ref.read(authRepositoryProvider).changeParentTeacherCode(
-            uid: widget.uid,
-            newCode: _code.text,
-            childIds: widget.childIds,
-          );
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('선생님 코드를 변경했어요. 아이를 다시 추가해주세요.')));
-      }
-    } on AuthFailure catch (e) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('변경 중 문제가 발생했어요.')));
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('선생님 코드 변경'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('코드를 바꾸면 등록된 학생이 모두 삭제됩니다.',
-              style: TextStyle(color: AppColors.danger)),
-          const SizedBox(height: AppSpace.sm),
-          TextField(
-            controller: _code,
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: '새 선생님 코드 (6자리)'),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.of(context).pop(),
-          child: const Text('취소'),
-        ),
-        TextButton(
-          onPressed: _saving ? null : _submit,
-          style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-          child: const Text('변경'),
-        ),
-      ],
-    );
-  }
-}
-
-/// 아이 추가 다이얼로그 — 자녀 이름만(선생님 코드는 기존 자녀 코드 자동 사용).
+/// 아이 추가 다이얼로그 — 자녀 이름 + (선생님 여럿이면) 선생님 선택.
 class _AddChildDialog extends ConsumerStatefulWidget {
   final String uid;
-  final String? teacherCode; // 자동 입력될 선생님 코드
-  const _AddChildDialog({required this.uid, this.teacherCode});
+  final Map<String, String> teachers; // {코드: 닉네임}
+  const _AddChildDialog({required this.uid, required this.teachers});
 
   @override
   ConsumerState<_AddChildDialog> createState() => _AddChildDialogState();
@@ -680,7 +689,14 @@ class _AddChildDialog extends ConsumerStatefulWidget {
 
 class _AddChildDialogState extends ConsumerState<_AddChildDialog> {
   final _name = TextEditingController();
+  String? _code; // 선택된 선생님 코드
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _code = widget.teachers.keys.isNotEmpty ? widget.teachers.keys.first : null;
+  }
 
   @override
   void dispose() {
@@ -689,7 +705,7 @@ class _AddChildDialogState extends ConsumerState<_AddChildDialog> {
   }
 
   Future<void> _submit() async {
-    final code = widget.teacherCode;
+    final code = _code;
     if (code == null || code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('연결된 선생님 코드를 찾을 수 없어요.')));
@@ -733,20 +749,124 @@ class _AddChildDialogState extends ConsumerState<_AddChildDialog> {
       title: const Text('아이 추가'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.teacherCode != null)
+          // 선생님이 하나면 캡션으로, 여럿이면 드롭다운으로.
+          if (widget.teachers.length == 1)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpace.sm),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('선생님 코드 ${widget.teacherCode}',
-                    style: AppText.caption),
+              child: Text(
+                '${widget.teachers.values.first} · 코드 ${widget.teachers.keys.first}',
+                style: AppText.caption,
               ),
+            )
+          else if (widget.teachers.length >= 2)
+            DropdownButtonFormField<String>(
+              initialValue: _code,
+              decoration: const InputDecoration(labelText: '선생님'),
+              items: [
+                for (final e in widget.teachers.entries)
+                  DropdownMenuItem(
+                      value: e.key, child: Text('${e.value} (${e.key})')),
+              ],
+              onChanged: (v) => setState(() => _code = v),
             ),
           TextField(
             controller: _name,
             autofocus: true,
             decoration: const InputDecoration(labelText: '자녀 이름'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+        TextButton(
+          onPressed: _saving ? null : _submit,
+          style: TextButton.styleFrom(foregroundColor: AppColors.primaryDeep),
+          child: const Text('추가'),
+        ),
+      ],
+    );
+  }
+}
+
+/// 선생님 추가 다이얼로그 — 6자리 코드 + 닉네임.
+class _AddTeacherDialog extends ConsumerStatefulWidget {
+  final String uid;
+  const _AddTeacherDialog({required this.uid});
+
+  @override
+  ConsumerState<_AddTeacherDialog> createState() => _AddTeacherDialogState();
+}
+
+class _AddTeacherDialogState extends ConsumerState<_AddTeacherDialog> {
+  final _code = TextEditingController();
+  final _nickname = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    _nickname.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_code.text.trim().length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('6자리 코드를 입력해주세요.')));
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await ref.read(authRepositoryProvider).addTeacher(
+            uid: widget.uid,
+            code: _code.text,
+            nickname: _nickname.text,
+          );
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('선생님을 추가했어요.')));
+      }
+    } on AuthFailure catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('추가 중 문제가 발생했어요.')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('선생님 추가'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _code,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            maxLength: 6,
+            decoration: const InputDecoration(labelText: '선생님 코드 (6자리)'),
+          ),
+          TextField(
+            controller: _nickname,
+            maxLength: 20,
+            onSubmitted: (_) => _saving ? null : _submit(),
+            decoration: const InputDecoration(
+                labelText: '닉네임 (예: 수학 김선생님)', helperText: '비우면 "선생님"'),
           ),
         ],
       ),
