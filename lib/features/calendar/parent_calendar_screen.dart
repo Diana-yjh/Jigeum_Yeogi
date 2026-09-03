@@ -6,6 +6,7 @@ import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
+import 'package:jigeum_yeogi/features/auth/state/auth_providers.dart';
 import 'package:jigeum_yeogi/features/calendar/widgets/calendar_cells.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
@@ -61,6 +62,17 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
     };
     final studentOf = {for (final c in children) c.id: c};
 
+    // 선생님이 2명 이상일 때만 기록에 선생님 닉네임을 색과 함께 표시.
+    final user = ref.watch(appUserProvider).value;
+    final directory = user?.teacherDirectory(
+            children.map((c) => c.teacherCode).where((c) => c.isNotEmpty)) ??
+        const <String, String>{};
+    final teacherKeys = directory.keys.toList();
+    String? teacherLabelOf(String code) =>
+        directory.length >= 2 ? directory[code] : null;
+    Color teacherColorOf(String code) => _deepen(AppColors.teacherColor(
+        stored: user?.teacherColors[code], index: teacherKeys.indexOf(code)));
+
     // 날짜별 등원 기록(아이 순서대로).
     final byDay = <int, List<AttendanceRecord>>{};
     for (final r in records.where((r) => r.isCheckedIn)) {
@@ -100,6 +112,8 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
               studentOf: studentOf,
               colorOf: colorOf,
               multi: multi,
+              teacherLabelOf: teacherLabelOf,
+              teacherColorOf: teacherColorOf,
             ),
           ],
         ),
@@ -345,6 +359,8 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
     required Map<String, Student> studentOf,
     required Map<String, Color> colorOf,
     required bool multi,
+    required String? Function(String) teacherLabelOf,
+    required Color Function(String) teacherColorOf,
   }) {
     final dateText = '${date.month}월 ${date.day}일 ${weekdayLabelOf(date)}요일';
     const dateStyle = TextStyle(
@@ -389,6 +405,14 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
                     : const StatusPill.regular(),
               ],
             ),
+            if (teacherLabelOf(r.teacherCode) != null) ...[
+              const SizedBox(height: AppSpace.xs),
+              Text(teacherLabelOf(r.teacherCode)!,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: teacherColorOf(r.teacherCode))),
+            ],
             const SizedBox(height: AppSpace.md),
             _StayRow(record: r, color: AppColors.primaryDeep),
             const SizedBox(height: AppSpace.sm),
@@ -416,6 +440,8 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
               student: studentOf[recs[i].studentId],
               color: colorOf[recs[i].studentId] ?? AppColors.primary,
               dayCode: dayCode,
+              teacherLabel: teacherLabelOf(recs[i].teacherCode),
+              teacherColor: teacherColorOf(recs[i].teacherCode),
             ),
           ],
         ],
@@ -430,11 +456,15 @@ class _ChildStayBlock extends StatelessWidget {
   final Student? student;
   final Color color;
   final String dayCode;
+  final String? teacherLabel; // 선생님 2명 이상일 때만 전달
+  final Color? teacherColor;
   const _ChildStayBlock({
     required this.record,
     required this.student,
     required this.color,
     required this.dayCode,
+    this.teacherLabel,
+    this.teacherColor,
   });
 
   @override
@@ -454,6 +484,15 @@ class _ChildStayBlock extends StatelessWidget {
             isMakeup ? const StatusPill.makeup() : const StatusPill.regular(),
           ],
         ),
+        if (teacherLabel != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 8 + AppSpace.sm, top: 2),
+            child: Text(teacherLabel!,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: teacherColor ?? AppColors.textSub)),
+          ),
         const SizedBox(height: AppSpace.sm),
         _StayRow(record: record, color: color),
         const SizedBox(height: AppSpace.xs),
@@ -593,4 +632,12 @@ class _StayBar extends StatelessWidget {
       },
     );
   }
+}
+
+/// 라벨 텍스트 가독성을 위해 선생님 색을 살짝 어둡게.
+Color _deepen(Color c) {
+  final hsl = HSLColor.fromColor(c);
+  return hsl
+      .withLightness((hsl.lightness - 0.12).clamp(0.0, 1.0))
+      .toColor();
 }
