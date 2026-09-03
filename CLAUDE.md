@@ -9,7 +9,7 @@
 - 사용자 역할: teacher(선생님), parent(학부모) - 로그인 시 선택하며 화면 트리가 완전히 분리됨
 - 선생님: 이메일 로그인 → 오늘 등원 예정 화면(홈), 오늘 출석, 스케줄(주간 편집/월간 보기), 설정(6자리 선생님 코드 확인)
 - 학부모: 선생님 코드(6자리) + 자녀 이름으로 회원가입, 이메일 로그인 → 아이 출결 화면(홈), 달력, 알림함, 설정
-- **다자녀 지원**: 홈은 아이별 좌우 스와이프 페이저, 달력은 한 달력에 아이별 색(`AppColors.childColor`), 설정에서 아이 추가/삭제/이름 수정
+- **다중 선생님·다자녀**: 학부모는 선생님 여러 명 연결(`users.teachers {코드:닉네임}` + `teacherColors`), `students` 문서는 아이×선생님 수강 1건 — 같은 이름끼리 한 아이로 묶는다. `teacherCode=''`는 연결 해제 상태(아이·기록 보존, 설정 "이 반에 아이 추가"로 재연결). 홈은 이름 묶음 페이저 + 수강별 리스트, 달력은 아이별 색 + 선생님 색 테두리, 설정은 선생님 블록에서 반 아이 관리
 - 출결 상태: 등원 전(pending) / 등원(present) / 하원(등원·하원 시각 기록) / 결석 예정(expected_absent)
 - 시각 표기는 앱 전역 오전/오후(`clock()` = "오후 3:02")
 
@@ -107,5 +107,6 @@ firebase deploy --only firestore:indexes  # 인덱스 배포
 - 채팅 기능은 요청으로 제거됨 — 다시 추가하지 않는다.
 - FCM 푸시: 등하원 시 학부모 알림. 발송은 Cloud Functions(`functions/`)에서만, 클라이언트는 토큰 저장·수신 처리만. 알림함 문구는 `functions/index.js` 발송 문구와 일치시킨다.
 - 재업로드 시 `pubspec.yaml` 빌드 번호(`+N`)를 올린다. 배포 체크리스트·계정 작업은 `docs/RELEASE_IOS.md`, Play 설문 답안은 `docs/PLAY_CONSOLE.md`.
+- 시뮬레이터/에뮬레이터 실행·배포 절차는 프로젝트 스킬 참고: `.claude/skills/running-simulators/`, `.claude/skills/releasing/`.
 - 운영 데이터 스크립트(`functions/scripts/`): 더미 출결 생성/삭제, 심사용 계정 생성. 서비스 계정 키는 저장소 밖 `~/.config/jigeum/serviceAccount.json`.
 - 개인정보처리방침·계정 삭제 페이지는 `docs/privacy/`·`docs/account-deletion/`(GitHub Pages로 서빙). 수집 항목·삭제 동작을 바꾸면 함께 갱신한다.

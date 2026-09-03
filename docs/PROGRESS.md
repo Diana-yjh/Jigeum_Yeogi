@@ -3,7 +3,7 @@
 학원 등하원 알림장 앱. 선생님과 학부모를 잇고, "우리 아이가 학원에 잘 도착했는지 실시간으로 안심"하는 것이 핵심 가치.
 
 - 사용자 역할: **선생님(teacher)** / **학부모(parent)** — 역할에 따라 완전히 다른 홈·탭 제공
-- 스택: Flutter 3.44 / Dart, Firebase(Auth·Firestore) — FCM 미사용, Riverpod 3.x, table_calendar, G마켓 산스 폰트, feature-first 구조
+- 스택: Flutter 3.44 / Dart, Firebase(Auth·Firestore·**FCM**·Cloud Functions), Riverpod 3.x, table_calendar, G마켓 산스 폰트, feature-first 구조
 - 하단 탭: 선생님 홈/출석/스케줄/설정 · 학부모 홈/달력/설정 (채팅 제외)
 
 ---
@@ -17,13 +17,38 @@
 | 3 | 출석 기능 — 선생님 체크 + attendance 기록, 학부모 라이브 상태 카드 | ✅ 완료 (실기기 확인) |
 | 4 | 출결 달력 (학부모/선생님 각각) | ✅ 완료 (실기기 확인) |
 | ~~5~~ | ~~채팅 + 시스템 메시지 칩~~ | ❌ 제외 (요청으로 삭제) |
-| ~~6~~ | ~~FCM 푸시 (등원/하원 알림)~~ | ❌ 제외 (요청) |
+| 6 | FCM 푸시 (등원/하원 알림) — Cloud Functions 트리거 | ✅ 완료 (TestFlight 검증) |
+| + | 다중 선생님·다자녀 모델 (닉네임·구분색·재연결) | ✅ 완료 |
+| + | 배포 준비 — TestFlight 빌드 1~5, Play AAB, 스토어 문서 | 🚀 진행 중 |
 | + | 선생님 스케줄(요일+시간, 정규/보충) | ✅ 완료 |
 | + | 디자인 리뉴얼 · 학부모 화면 재설계 | ✅ 완료 |
 
 ---
 
-## Phase 4 이후 개선·수정 (최신)
+## 2026-08-31 ~ 09-03 — 배포 준비 & 다중 선생님 (최신)
+
+### 앱 이름·배포
+- 표시 이름 **오늘출석**으로 전면 변경 (번들 ID `com.diana.jigeumYeogi`·저장소명·Firebase 프로젝트는 유지).
+- **iOS**: 아이콘·런치스크린 교체, PrivacyInfo.xcprivacy, iPhone 전용(TARGETED_DEVICE_FAMILY=1). **TestFlight 빌드 1~5 업로드** — 절차·기록은 `docs/RELEASE_IOS.md`.
+- **Android**: 릴리즈 키스토어 서명(key.properties, gitignore), AAB/APK 산출. Play Console 설문 답안 `docs/PLAY_CONSOLE.md`, 심사용 계정(@jigeumyeogi.test).
+- **스토어 페이지**: 개인정보처리방침·지원·계정 삭제 페이지를 GitHub Pages로 서빙(`docs/privacy|support|account-deletion`). README 홍보 이미지 리뉴얼.
+
+### FCM 푸시 (Phase 6 — 도입으로 번복)
+- Cloud Functions `onAttendanceWrite`(Firestore 트리거) → 등하원 시 학부모 FCM 발송. `onUserDelete`·`onStudentDelete` 정리 트리거.
+- 학부모 **알림함**: 별도 컬렉션 없이 attendance 30일 파생 + `notificationsSeenAt` 읽음 기준. 홈 종 아이콘.
+
+### 다중 선생님·다자녀 모델
+- 학부모가 선생님 여러 명 연결: `users.teachers {코드: 닉네임}` + `teacherColors {코드: 색}` — 닉네임·구분색 사용자 지정.
+- **수강 모델**: `students` 문서 = 아이 × 선생님 1건. 같은 이름끼리 한 아이로 묶음(홈 페이저·설정·달력).
+- `teacherCode = ''` = **연결 해제**(아이·기록 보존). 설정 "이 반에 아이 추가"에서 기존 아이 선택 시 **재연결**(문서 재사용, 기록 유지) — 보안 규칙 확장 배포(2026-09-03).
+- 홈: 이름 묶음 좌우 페이저 + 수강별 접히지 않는 리스트(선생님 칩·색 히어로·주간 카드 색). 미연결 수강은 기본 등원 카드 대신 안내만.
+- 달력: 아이별 색 도트 + 선생님 2명 이상이면 상세 기록 셀을 선생님 색 테두리(legend 스타일)로 감쌈.
+- 설정: 선생님 블록(색 점·닉네임 수정·반 아이 관리·연결 해제), 우리 아이는 이름당 1행(전체 이름 변경/전체 삭제), 회원탈퇴.
+- 선생님 쪽: 학생 "내보내기"(학부모 데이터 보존), 스케줄 유지.
+
+---
+
+## Phase 4 이후 개선·수정
 
 ### 기능
 - **선생님 스케줄**: 학생별 요일+시간(30분 단위) + 정규/보충. 학생 탭 → 상세 편집 화면. 월간 보기(날짜별 예정 인원수, 선택 날짜로 상단 요약 연동).
@@ -278,9 +303,8 @@ lib/core/util/time_format.dart       # 요일 코드/라벨, 30분 시간 슬롯
 
 ---
 
-## Phase 6(FCM 푸시) — 제외 ❌ (요청)
-- Cloud Functions(Blaze 요금제)·iOS APNs 설정 부담으로 미도입 결정.
-- `users.fcmToken` 필드는 모델에 남아 있으나 미사용.
+## Phase 6(FCM 푸시) — 처음 제외했다가 도입 ✅
+- 초기에 미도입 결정했으나 이후 Blaze 전환 + Cloud Functions로 구현(위 최신 섹션 참고).
 
 ## Phase 5(채팅) — 제외 ❌ (요청으로 삭제)
 - 하단 탭에서 채팅 탭 제거 (선생님: 홈/출석/설정, 학부모: 홈/달력/설정)
@@ -296,4 +320,4 @@ lib/core/util/time_format.dart       # 요일 코드/라벨, 30분 시간 슬롯
 
 ---
 
-_마지막 업데이트: 채팅 기능 제외 반영_
+_마지막 업데이트: 2026-09-03 — 배포 준비·다중 선생님·재연결 반영_
