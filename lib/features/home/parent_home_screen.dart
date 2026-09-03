@@ -26,27 +26,42 @@ Color? _teacherColorFor(
   );
 }
 
+/// 같은 이름의 수강(학생 문서)을 한 아이로 묶는다 — 한 아이가 여러 선생님에게
+/// 배우면 선생님별 문서가 따로 있으므로, 화면에서는 이름 기준으로 합쳐 보여준다.
+List<List<Student>> _groupByName(List<Student> children) {
+  final map = <String, List<Student>>{};
+  for (final c in children) {
+    map.putIfAbsent(c.name.trim(), () => []).add(c);
+  }
+  return map.values.toList();
+}
+
 /// 학부모 홈 — "우리 아이가 지금 어디 있는지"가 1초 안에 읽히는 화면.
 class ParentHomeScreen extends ConsumerWidget {
   const ParentHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final children = ref.watch(childrenProvider).value ?? const [];
+    final children =
+        ref.watch(childrenProvider).value ?? const <Student>[];
+    final groups = _groupByName(children);
 
-    // 자녀 2명 이상이면 아이별 구획을 좌우로 넘겨 본다.
+    // 수강이 2건 이상이면(아이 여럿 또는 한 아이 다중 수강) 페이저/묶음 화면.
     if (children.length >= 2) {
       return AppScaffold(
         body: SafeArea(
           child: Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
                     AppSpace.md, AppSpace.md, AppSpace.md, 0),
-                child: _Header(name: '우리 아이들'),
+                child: _Header(
+                    name: groups.length >= 2
+                        ? '우리 아이들'
+                        : groups.first.first.name),
               ),
               const SizedBox(height: AppSpace.lg),
-              Expanded(child: _ChildPager(children: children)),
+              Expanded(child: _ChildPager(groups: groups)),
             ],
           ),
         ),
@@ -91,8 +106,8 @@ class ParentHomeScreen extends ConsumerWidget {
 /// 아이별 구획을 좌우 스와이프로 넘기는 페이저.
 /// 아이가 늘어도 화면이 세로로 길어지지 않게 한 번에 한 명씩 보여준다.
 class _ChildPager extends StatefulWidget {
-  final List<Student> children;
-  const _ChildPager({required this.children});
+  final List<List<Student>> groups; // 이름으로 묶인 수강들
+  const _ChildPager({required this.groups});
 
   @override
   State<_ChildPager> createState() => _ChildPagerState();
@@ -111,24 +126,29 @@ class _ChildPagerState extends State<_ChildPager> {
   @override
   Widget build(BuildContext context) {
     // 자녀가 삭제되면 현재 페이지가 범위를 벗어날 수 있다.
-    final index = _page.clamp(0, widget.children.length - 1);
+    final index = _page.clamp(0, widget.groups.length - 1);
 
     return Column(
       children: [
         Expanded(
           child: PageView.builder(
             controller: _controller,
-            itemCount: widget.children.length,
+            itemCount: widget.groups.length,
             onPageChanged: (i) => setState(() => _page = i),
             itemBuilder: (context, i) => SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
                   AppSpace.md, 0, AppSpace.md, AppSpace.md),
-              child: _ChildSection(child: widget.children[i]),
+              child: _ChildSection(
+                enrollments: widget.groups[i],
+                showName: widget.groups.length >= 2,
+              ),
             ),
           ),
         ),
-        const SizedBox(height: AppSpace.sm),
-        _PageDots(count: widget.children.length, index: index),
+        if (widget.groups.length >= 2) ...[
+          const SizedBox(height: AppSpace.sm),
+          _PageDots(count: widget.groups.length, index: index),
+        ],
         const SizedBox(height: AppSpace.md),
       ],
     );
@@ -163,48 +183,133 @@ class _PageDots extends StatelessWidget {
   }
 }
 
-/// 아이 한 명의 홈 구획(자녀 여러 명일 때).
-/// 단일 자녀 화면과 같은 히어로 + 주간 카드를 이름 아래에 그대로 반복한다.
+/// 한 아이의 홈 구획 — 같은 이름의 수강들을 한 페이지에 묶는다.
+/// 수강이 하나면 기존과 동일(히어로 + 주간 카드), 여럿이면 선생님별
+/// 칩+히어로를 나열하고 주간 출석은 선생님별 요약으로 합친다.
 class _ChildSection extends ConsumerWidget {
-  final Student child;
-  const _ChildSection({required this.child});
+  final List<Student> enrollments; // 같은 이름의 수강(선생님별 문서)
+  final bool showName;
+  const _ChildSection({required this.enrollments, this.showName = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final today = ref.watch(studentTodayRecordProvider(child.id)).value;
-    // 주간 기록은 자녀 전체를 한 번에 받아오므로 이 아이 것만 골라 쓴다.
-    final week = (ref.watch(childWeekRecordsProvider).value ?? const [])
-        .where((r) => r.studentId == child.id)
-        .toList();
+    final week = ref.watch(childWeekRecordsProvider).value ?? const [];
     final children = ref.watch(childrenProvider).value ?? const <Student>[];
     final appUser = ref.watch(appUserProvider).value;
     final directory =
         appUser?.teacherDirectory(children.map((c) => c.teacherCode)) ??
             const <String, String>{};
-    final tint = _teacherColorFor(appUser, directory, child.teacherCode);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Flexible(
-              child: Text(child.name,
-                  style: AppText.sectionTitle, overflow: TextOverflow.ellipsis),
-            ),
-            // 선생님이 여럿이면 어느 반 등원 상태인지 색·닉네임으로 구분.
-            if (directory.length >= 2) ...[
-              const SizedBox(width: AppSpace.sm),
-              _TeacherChip(
-                  directory: directory, code: child.teacherCode, color: tint),
-            ],
-          ],
-        ),
-        const SizedBox(height: AppSpace.sm),
-        _HeroCard(record: today, tint: tint),
-        const SizedBox(height: AppSpace.md),
-        _WeekCard(child: child, week: week),
+        if (showName) ...[
+          Text(enrollments.first.name,
+              style: AppText.sectionTitle, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: AppSpace.sm),
+        ],
+        for (final e in enrollments) ...[
+          Builder(builder: (context) {
+            final tint = _teacherColorFor(appUser, directory, e.teacherCode);
+            final today = ref.watch(studentTodayRecordProvider(e.id)).value;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (directory.length >= 2) ...[
+                  _TeacherChip(
+                      directory: directory, code: e.teacherCode, color: tint),
+                  const SizedBox(height: AppSpace.sm),
+                ],
+                _HeroCard(record: today, tint: tint),
+                const SizedBox(height: AppSpace.md),
+              ],
+            );
+          }),
+        ],
+        if (enrollments.length == 1)
+          _WeekCard(
+            child: enrollments.first,
+            week: week
+                .where((r) => r.studentId == enrollments.first.id)
+                .toList(),
+          )
+        else
+          _GroupWeekCard(
+            enrollments: enrollments,
+            week: week,
+            directory: directory,
+            appUser: appUser,
+          ),
       ],
+    );
+  }
+}
+
+/// 다중 수강 아이의 주간 요약 — 선생님별 "● 닉네임 n / m회" 나열.
+class _GroupWeekCard extends StatelessWidget {
+  final List<Student> enrollments;
+  final List<AttendanceRecord> week;
+  final Map<String, String> directory;
+  final AppUser? appUser;
+  const _GroupWeekCard({
+    required this.enrollments,
+    required this.week,
+    required this.directory,
+    required this.appUser,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpace.lg),
+      decoration: AppDecoration.card(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('이번 주 출석',
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMain)),
+          const SizedBox(height: AppSpace.md),
+          Wrap(
+            spacing: AppSpace.lg,
+            runSpacing: AppSpace.sm,
+            children: [
+              for (final e in enrollments)
+                Builder(builder: (context) {
+                  final color =
+                      _teacherColorFor(appUser, directory, e.teacherCode) ??
+                          AppColors.primary;
+                  final count = week
+                      .where((r) => r.studentId == e.id && r.isCheckedIn)
+                      .length;
+                  final denom = e.scheduledDays.length;
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                            color: color, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(directory[e.teacherCode] ?? '선생님',
+                          style: AppText.caption),
+                      const SizedBox(width: 6),
+                      Text(denom > 0 ? '$count / $denom회' : '$count회',
+                          style: AppText.caption.copyWith(
+                              color: AppColors.textMain,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  );
+                }),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
