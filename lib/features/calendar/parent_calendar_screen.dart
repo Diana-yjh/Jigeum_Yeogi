@@ -397,22 +397,22 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(dateText, style: dateStyle),
+                Expanded(child: Text(dateText, style: dateStyle)),
+                // 선생님 구분 — 카드 오른쪽 위(pill 왼쪽).
+                if (teacherLabelOf(r.teacherCode) != null) ...[
+                  Text(teacherLabelOf(r.teacherCode)!,
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: teacherColorOf(r.teacherCode))),
+                  const SizedBox(width: AppSpace.sm),
+                ],
                 isMakeup
                     ? const StatusPill.makeup()
                     : const StatusPill.regular(),
               ],
             ),
-            if (teacherLabelOf(r.teacherCode) != null) ...[
-              const SizedBox(height: AppSpace.xs),
-              Text(teacherLabelOf(r.teacherCode)!,
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: teacherColorOf(r.teacherCode))),
-            ],
             const SizedBox(height: AppSpace.md),
             _StayRow(record: r, color: AppColors.primaryDeep),
             const SizedBox(height: AppSpace.sm),
@@ -481,18 +481,18 @@ class _ChildStayBlock extends StatelessWidget {
               child: Text(student?.name ?? '우리 아이',
                   style: AppText.cardTitle, overflow: TextOverflow.ellipsis),
             ),
+            // 선생님 구분 — 블록 오른쪽 위(pill 왼쪽).
+            if (teacherLabel != null) ...[
+              Text(teacherLabel!,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: teacherColor ?? AppColors.textSub)),
+              const SizedBox(width: AppSpace.sm),
+            ],
             isMakeup ? const StatusPill.makeup() : const StatusPill.regular(),
           ],
         ),
-        if (teacherLabel != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 8 + AppSpace.sm, top: 2),
-            child: Text(teacherLabel!,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: teacherColor ?? AppColors.textSub)),
-          ),
         const SizedBox(height: AppSpace.sm),
         _StayRow(record: record, color: color),
         const SizedBox(height: AppSpace.xs),
