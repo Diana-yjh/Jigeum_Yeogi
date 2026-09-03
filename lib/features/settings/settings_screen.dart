@@ -244,7 +244,8 @@ class _ParentSettings extends ConsumerWidget {
             _profileCard(context, ref, user),
             const SizedBox(height: AppSpace.md),
             const _SectionLabel('선생님'),
-            _RowsCard(_teacherRows(context, ref, user.uid, teachers, children)),
+            _RowsCard(_teacherRows(
+                context, ref, user, teachers, children)),
             const SizedBox(height: AppSpace.md),
             const _SectionLabel('우리 아이'),
             _RowsCard(childRows),
@@ -320,8 +321,9 @@ class _ParentSettings extends ConsumerWidget {
   }
 
   /// 선생님 섹션 행들 — 연결된 선생님(닉네임·코드·수정·해제) + 선생님 추가.
-  List<Widget> _teacherRows(BuildContext context, WidgetRef ref, String uid,
+  List<Widget> _teacherRows(BuildContext context, WidgetRef ref, AppUser user,
       Map<String, String> teachers, List<Student> children) {
+    final uid = user.uid;
     final rows = <Widget>[];
     for (final e in teachers.entries) {
       final code = e.key;
@@ -369,8 +371,9 @@ class _ParentSettings extends ConsumerWidget {
               ),
             ),
             GestureDetector(
-              onTap: () =>
-                  _confirmRemoveTeacher(context, ref, uid, code, hasChildren),
+              onTap: () => _confirmRemoveTeacher(context, ref, uid, code,
+                  hasChildren: hasChildren,
+                  clearLegacy: user.teacherCode == code),
               child: const Icon(Icons.link_off,
                   size: 20, color: AppColors.textFaint),
             ),
@@ -399,7 +402,8 @@ class _ParentSettings extends ConsumerWidget {
 
   /// 선생님 연결 해제 확인 — 그 반 자녀가 남아 있으면 막는다.
   Future<void> _confirmRemoveTeacher(BuildContext context, WidgetRef ref,
-      String uid, String code, bool hasChildren) async {
+      String uid, String code,
+      {required bool hasChildren, required bool clearLegacy}) async {
     if (hasChildren) {
       _snack(context, '이 선생님 반에 아이가 있어요. 아이를 먼저 삭제하거나 옮겨주세요.');
       return;
@@ -424,7 +428,9 @@ class _ParentSettings extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
-      await ref.read(authRepositoryProvider).removeTeacher(uid, code);
+      await ref
+          .read(authRepositoryProvider)
+          .removeTeacher(uid, code, clearLegacy: clearLegacy);
     } catch (_) {
       if (context.mounted) _snack(context, '해제 중 문제가 발생했어요.');
     }

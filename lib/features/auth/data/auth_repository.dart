@@ -112,11 +112,14 @@ class AuthRepository {
   }
 
   /// 선생님 연결 해제. 그 선생님 소속 자녀가 있으면 화면에서 먼저 막는다.
-  Future<void> removeTeacher(String uid, String code) {
-    return _db
-        .collection('users')
-        .doc(uid)
-        .update({'teachers.$code': FieldValue.delete()});
+  /// [clearLegacy]가 참이면 구버전 호환 필드(teacherCode)도 함께 지운다 —
+  /// 남겨두면 화면이 그 코드를 다시 파생해 해제가 안 된 것처럼 보인다.
+  Future<void> removeTeacher(String uid, String code,
+      {bool clearLegacy = false}) {
+    return _db.collection('users').doc(uid).update({
+      'teachers.$code': FieldValue.delete(),
+      if (clearLegacy) 'teacherCode': FieldValue.delete(),
+    });
   }
 
   /// 회원탈퇴 — Auth 계정 삭제. Firestore 데이터는 Cloud Functions가 정리.
