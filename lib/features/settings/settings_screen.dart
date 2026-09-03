@@ -195,33 +195,43 @@ class _ParentSettings extends ConsumerWidget {
     final teachers =
         user.teacherDirectory(children.map((c) => c.teacherCode));
 
-    // 우리 아이 섹션 행: 자녀 이름(+선생님 닉네임, 수정·삭제) → 아이 추가.
+    // 우리 아이 = 같은 이름은 한 번만. 이름 수정·삭제는 모든 반에 일괄 적용.
+    final uniqueNames = <String>[];
+    for (final c in children) {
+      final n = c.name.trim();
+      if (!uniqueNames.contains(n)) uniqueNames.add(n);
+    }
     final childRows = <Widget>[];
-    if (children.isEmpty) {
+    if (uniqueNames.isEmpty) {
       childRows.add(_childRow('연결된 자녀 없음'));
     } else {
-      for (final c in children) {
+      for (final name in uniqueNames) {
+        final enrolled = children
+            .where((c) => c.name.trim() == name && c.teacherCode.isNotEmpty)
+            .map((c) => teachers[c.teacherCode] ?? '선생님')
+            .toList();
         childRows.add(_childRow(
-          c.name,
-          // 연결 해제된 아이는 항상 표시, 그 외엔 선생님 여럿일 때만.
-          caption: c.teacherCode.isEmpty
-              ? '연결된 선생님 없음'
-              : (teachers.length >= 2 ? teachers[c.teacherCode] : null),
+          name,
+          caption: enrolled.isEmpty ? '연결된 선생님 없음' : enrolled.join(' · '),
           onEdit: () => showDialog(
             context: context,
             builder: (_) => EditNameDialog(
               title: '아이 이름 수정',
               label: '자녀 이름',
-              initial: c.name,
-              onSubmit: (name) =>
-                  ref.read(authRepositoryProvider).renameChild(c.id, name),
+              initial: name,
+              onSubmit: (newName) =>
+                  ref.read(authRepositoryProvider).renameChildEverywhere(
+                        parentUid: user.uid,
+                        oldName: name,
+                        newName: newName,
+                      ),
             ),
           ),
-          onDelete: () => _confirmDeleteChild(context, ref, c),
+          onDelete: () =>
+              _confirmDeleteEverywhere(context, ref, user.uid, name),
         ));
       }
     }
-    childRows.add(_addChildRow(context, ref, user.uid, teachers));
 
     return AppScaffold(
       body: SafeArea(
@@ -394,6 +404,66 @@ class _ParentSettings extends ConsumerWidget {
           ],
         ),
       ));
+      // 이 반에 속한 아이들 — 반에서 빼기(x)와 반별 아이 추가.
+      final inClass =
+          children.where((c) => c.teacherCode == code).toList();
+      for (final c in inClass) {
+        rows.add(SizedBox(
+          height: 38,
+          child: Row(
+            children: [
+              const SizedBox(width: AppSpace.lg),
+              Icon(Icons.subdirectory_arrow_right,
+                  size: 16, color: AppColors.textFaint),
+              const SizedBox(width: AppSpace.sm),
+              Expanded(
+                child: Text(c.name,
+                    style: AppText.caption
+                        .copyWith(color: AppColors.textMain)),
+              ),
+              GestureDetector(
+                onTap: () =>
+                    _confirmRemoveFromClass(context, ref, c, e.value),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpace.xs),
+                  child: Icon(Icons.close,
+                      size: 18, color: AppColors.textFaint),
+                ),
+              ),
+            ],
+          ),
+        ));
+      }
+      rows.add(InkWell(
+        onTap: () => showDialog(
+          context: context,
+          builder: (_) => _AddChildToClassDialog(
+            uid: uid,
+            code: code,
+            teacherLabel: e.value,
+            existingNames: {
+              for (final c in children)
+                if (!children
+                    .where((x) => x.teacherCode == code)
+                    .any((x) => x.name.trim() == c.name.trim()))
+                  c.name.trim(),
+            }.toList(),
+            namesInClass:
+                inClass.map((c) => c.name.trim()).toSet().toList(),
+          ),
+        ),
+        child: const SizedBox(
+          height: 38,
+          child: Row(
+            children: [
+              SizedBox(width: AppSpace.lg),
+              Icon(Icons.person_add_alt, size: 16, color: AppColors.textFaint),
+              SizedBox(width: AppSpace.sm),
+              Text('이 반에 아이 추가', style: AppText.caption),
+            ],
+          ),
+        ),
+      ));
     }
     rows.add(InkWell(
       onTap: () => showDialog(
@@ -501,41 +571,52 @@ class _ParentSettings extends ConsumerWidget {
   }
 
 
-  Widget _addChildRow(BuildContext context, WidgetRef ref, String uid,
-      Map<String, String> teachers) {
-    return InkWell(
-      onTap: () => showDialog(
-        context: context,
-        builder: (_) => _AddChildDialog(uid: uid, teachers: teachers),
-      ),
-      child: const SizedBox(
-        height: 44,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('아이 추가', style: AppText.body),
-            Icon(Icons.add, size: 20, color: AppColors.textFaint),
-          ],
-        ),
-      ),
-    );
-  }
 
-  /// 자녀 삭제 확인.
-  Future<void> _confirmDeleteChild(
-      BuildContext context, WidgetRef ref, Student child) async {
+  /// 반에서 빼기 — 해당 수강 문서만 삭제(그 반 출결 기록도 함께).
+  Future<void> _confirmRemoveFromClass(BuildContext context, WidgetRef ref,
+      Student child, String teacherLabel) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('아이 삭제'),
-        content: Text('${child.name} 학생을 삭제할까요?\n출결 기록도 함께 삭제됩니다.'),
+      builder: (context) => AlertDialog(
+        title: Text('${child.name} · $teacherLabel'),
+        content: const Text('이 반에서 아이를 뺄까요?\n이 반의 출결 기록도 함께 삭제됩니다.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('취소'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('빼기'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(authRepositoryProvider).deleteChild(child.id);
+    } catch (_) {
+      if (context.mounted) _snack(context, '삭제 중 문제가 발생했어요.');
+    }
+  }
+
+  /// 아이를 모든 반에서 삭제.
+  Future<void> _confirmDeleteEverywhere(
+      BuildContext context, WidgetRef ref, String uid, String name) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$name 삭제'),
+        content: const Text('아이를 모든 선생님 반에서 삭제할까요?\n'
+            '출결 기록도 함께 삭제되며 되돌릴 수 없어요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
             child: const Text('삭제'),
           ),
@@ -544,7 +625,10 @@ class _ParentSettings extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
-      await ref.read(authRepositoryProvider).deleteChild(child.id);
+      await ref
+          .read(authRepositoryProvider)
+          .deleteChildEverywhere(parentUid: uid, name: name);
+      if (context.mounted) _snack(context, '$name 아이를 삭제했어요.');
     } catch (_) {
       if (context.mounted) _snack(context, '삭제 중 문제가 발생했어요.');
     }
@@ -700,26 +784,34 @@ class _TeacherCodeCard extends StatelessWidget {
 }
 
 /// 선생님 코드 변경 다이얼로그 — 변경 시 등록된 학생이 모두 삭제됨.
-/// 아이 추가 다이얼로그 — 자녀 이름 + (선생님 여럿이면) 선생님 선택.
-class _AddChildDialog extends ConsumerStatefulWidget {
+/// 반별 아이 추가 — 기존 아이는 선택으로(같은 아이는 한 번만 입력),
+/// 새 아이는 직접 입력.
+class _AddChildToClassDialog extends ConsumerStatefulWidget {
   final String uid;
-  final Map<String, String> teachers; // {코드: 닉네임}
-  const _AddChildDialog({required this.uid, required this.teachers});
+  final String code;
+  final String teacherLabel;
+  final List<String> existingNames; // 이 반에 아직 없는 기존 아이들
+  final List<String> namesInClass; // 이 반에 이미 있는 이름(중복 방지)
+  const _AddChildToClassDialog({
+    required this.uid,
+    required this.code,
+    required this.teacherLabel,
+    required this.existingNames,
+    required this.namesInClass,
+  });
 
   @override
-  ConsumerState<_AddChildDialog> createState() => _AddChildDialogState();
+  ConsumerState<_AddChildToClassDialog> createState() =>
+      _AddChildToClassDialogState();
 }
 
-class _AddChildDialogState extends ConsumerState<_AddChildDialog> {
+class _AddChildToClassDialogState
+    extends ConsumerState<_AddChildToClassDialog> {
+  static const _newChild = '__new__';
   final _name = TextEditingController();
-  String? _code; // 선택된 선생님 코드
+  late String _selected =
+      widget.existingNames.isNotEmpty ? widget.existingNames.first : _newChild;
   bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _code = widget.teachers.keys.isNotEmpty ? widget.teachers.keys.first : null;
-  }
 
   @override
   void dispose() {
@@ -728,28 +820,29 @@ class _AddChildDialogState extends ConsumerState<_AddChildDialog> {
   }
 
   Future<void> _submit() async {
-    final code = _code;
-    if (code == null || code.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('연결된 선생님 코드를 찾을 수 없어요.')));
-      return;
-    }
-    if (_name.text.trim().isEmpty) {
+    final name =
+        (_selected == _newChild ? _name.text : _selected).trim();
+    if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('자녀 이름을 입력해주세요.')));
+      return;
+    }
+    if (widget.namesInClass.contains(name)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('이미 이 반에 있는 아이예요.')));
       return;
     }
     setState(() => _saving = true);
     try {
       await ref.read(authRepositoryProvider).addChild(
             parentUid: widget.uid,
-            teacherCode: code,
-            childName: _name.text,
+            teacherCode: widget.code,
+            childName: name,
           );
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('아이를 추가했어요.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('$name 아이를 ${widget.teacherLabel} 반에 추가했어요.')));
       }
     } on AuthFailure catch (e) {
       if (mounted) {
@@ -769,36 +862,31 @@ class _AddChildDialogState extends ConsumerState<_AddChildDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('아이 추가'),
+      title: Text('${widget.teacherLabel} 반에 아이 추가'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 선생님이 하나면 캡션으로, 여럿이면 드롭다운으로.
-          if (widget.teachers.length == 1)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpace.sm),
-              child: Text(
-                '${widget.teachers.values.first} · 코드 ${widget.teachers.keys.first}',
-                style: AppText.caption,
-              ),
-            )
-          else if (widget.teachers.length >= 2)
+          if (widget.existingNames.isNotEmpty) ...[
             DropdownButtonFormField<String>(
-              initialValue: _code,
-              decoration: const InputDecoration(labelText: '선생님'),
+              initialValue: _selected,
+              decoration: const InputDecoration(labelText: '아이'),
               items: [
-                for (final e in widget.teachers.entries)
-                  DropdownMenuItem(
-                      value: e.key, child: Text('${e.value} (${e.key})')),
+                for (final n in widget.existingNames)
+                  DropdownMenuItem(value: n, child: Text(n)),
+                const DropdownMenuItem(
+                    value: _newChild, child: Text('새로운 아이 직접 입력…')),
               ],
-              onChanged: (v) => setState(() => _code = v),
+              onChanged: (v) => setState(() => _selected = v ?? _newChild),
             ),
-          TextField(
-            controller: _name,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: '자녀 이름'),
-          ),
+            const SizedBox(height: AppSpace.sm),
+          ],
+          if (_selected == _newChild)
+            TextField(
+              controller: _name,
+              autofocus: widget.existingNames.isEmpty,
+              decoration: const InputDecoration(labelText: '자녀 이름'),
+            ),
         ],
       ),
       actions: [

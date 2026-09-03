@@ -1,4 +1,4 @@
-// 학부모 설정 — 여러 선생님 연결 + 닉네임.
+// 학부모 설정 — 선생님 아래 반 아이 관리 + 우리 아이는 이름당 한 번.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +29,7 @@ Future<void> _pump(WidgetTester tester,
   }
   await loader.load();
 
-  tester.view.physicalSize = const Size(1170, 2532);
+  tester.view.physicalSize = const Size(1170, 3200);
   tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);
 
@@ -45,60 +45,49 @@ Future<void> _pump(WidgetTester tester,
   await tester.pumpAndSettle();
 }
 
+const _user = AppUser(
+  uid: 'p1',
+  role: Role.parent,
+  name: '홍테스트',
+  email: 'p@test.com',
+  teachers: {'111111': '수학 김선생님', '222222': '피아노 이선생님'},
+);
+
 void main() {
-  testWidgets('선생님 여럿: 닉네임 목록·자녀 옆 소속 캡션·아이 추가에 드롭다운', (tester) async {
-    const user = AppUser(
-      uid: 'p1',
-      role: Role.parent,
-      name: '홍테스트',
-      email: 'p@test.com',
-      teachers: {'111111': '수학 김선생님', '222222': '피아노 이선생님'},
-    );
-    await _pump(tester, user: user, children: [
-      _child('s1', '김테스트', '111111'),
-      _child('s2', '박테스트', '222222'),
+  testWidgets('선생님 아래 반 아이들이 나열되고, 같은 이름 아이는 우리 아이에 한 번만',
+      (tester) async {
+    await _pump(tester, user: _user, children: [
+      _child('m1', '김테스트', '111111'), // 수학
+      _child('pi1', '김테스트', '222222'), // 피아노 (같은 아이)
+      _child('s3', '박테스트', '111111'), // 수학
     ]);
 
-    // 선생님 섹션 — 닉네임과 코드가 모두 보인다.
-    expect(find.text('수학 김선생님'), findsWidgets);
-    expect(find.text('피아노 이선생님'), findsWidgets);
-    expect(find.text('111111'), findsOneWidget);
-    expect(find.text('222222'), findsOneWidget);
-    expect(find.text('선생님 추가'), findsOneWidget);
+    // 선생님 블록 아래 반 소속 아이들 + "이 반에 아이 추가" 행이 반마다.
+    expect(find.byIcon(Icons.subdirectory_arrow_right), findsNWidgets(3));
+    expect(find.text('이 반에 아이 추가'), findsNWidgets(2));
 
-    // 자녀 행에 소속 선생님 닉네임 캡션.
-    expect(
-      find.descendant(of: find.byType(ListView), matching: find.text('김테스트')),
-      findsOneWidget,
-    );
-
-    // 아이 추가 → 선생님 드롭다운.
-    await tester.tap(find.text('아이 추가'));
-    await tester.pumpAndSettle();
-    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
-    expect(find.text('수학 김선생님 (111111)'), findsOneWidget);
+    // 우리 아이: 김테스트는 한 번만, 소속 닉네임이 캡션으로 합쳐진다.
+    expect(find.text('수학 김선생님 · 피아노 이선생님'), findsOneWidget);
+    expect(find.text('박테스트'), findsNWidgets(2)); // 반 목록 1 + 우리 아이 1
+    expect(find.text('김테스트'), findsNWidgets(3)); // 반 목록 2 + 우리 아이 1
   });
 
-  testWidgets('선생님 하나(구버전 계정): 파생 목록 + 아이 추가는 드롭다운 없이 캡션', (tester) async {
-    // teachers 맵 없이 teacherCode만 있는 기존 계정.
-    const user = AppUser(
-      uid: 'p1',
-      role: Role.parent,
-      name: '홍테스트',
-      email: 'p@test.com',
-      teacherCode: '374512',
-    );
-    await _pump(tester, user: user, children: [_child('s1', '김테스트', '374512')]);
+  testWidgets('이 반에 아이 추가 → 기존 아이는 드롭다운으로 선택(한 번만 입력)',
+      (tester) async {
+    await _pump(tester, user: _user, children: [
+      _child('m1', '김테스트', '111111'),
+      _child('s3', '박테스트', '111111'),
+    ]);
 
-    // 파생된 기본 닉네임과 코드.
-    // '선생님' 텍스트 = 섹션 라벨 + 파생된 기본 닉네임 행, 정확히 2개.
-    expect(find.text('선생님'), findsNWidgets(2));
-    expect(find.text('374512'), findsOneWidget);
-
-    // 자녀 행에는 캡션 없음(선생님 하나).
-    await tester.tap(find.text('아이 추가'));
+    // 피아노 반(아이 없음)의 추가 행을 탭.
+    await tester.tap(find.text('이 반에 아이 추가').last);
     await tester.pumpAndSettle();
-    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
-    expect(find.textContaining('코드 374512'), findsOneWidget);
+
+    expect(find.text('피아노 이선생님 반에 아이 추가'), findsOneWidget);
+    // 기존 아이 선택 드롭다운 + 직접 입력 옵션.
+    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    expect(find.text('새로운 아이 직접 입력…'), findsOneWidget);
   });
 }

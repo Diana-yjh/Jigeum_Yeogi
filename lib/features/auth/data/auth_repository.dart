@@ -80,6 +80,41 @@ class AuthRepository {
         .update({'teacherCode': ''});
   }
 
+  /// 같은 이름의 자녀(모든 반의 수강 문서)를 한 번에 이름 변경.
+  Future<void> renameChildEverywhere({
+    required String parentUid,
+    required String oldName,
+    required String newName,
+  }) async {
+    final snap = await _db
+        .collection('students')
+        .where('parentUid', isEqualTo: parentUid)
+        .where('name', isEqualTo: oldName.trim())
+        .get();
+    final batch = _db.batch();
+    for (final d in snap.docs) {
+      batch.set(d.reference, {'name': newName.trim()}, SetOptions(merge: true));
+    }
+    await batch.commit();
+  }
+
+  /// 같은 이름의 자녀를 모든 반에서 삭제. 출결 기록은 onStudentDelete가 정리.
+  Future<void> deleteChildEverywhere({
+    required String parentUid,
+    required String name,
+  }) async {
+    final snap = await _db
+        .collection('students')
+        .where('parentUid', isEqualTo: parentUid)
+        .where('name', isEqualTo: name.trim())
+        .get();
+    final batch = _db.batch();
+    for (final d in snap.docs) {
+      batch.delete(d.reference);
+    }
+    await batch.commit();
+  }
+
   /// 학생 삭제 — 학부모(내 자녀)·선생님(내 반 학생) 공용.
   /// 출결 기록은 Cloud Functions(onStudentDelete)가 정리.
   Future<void> deleteChild(String studentId) {
