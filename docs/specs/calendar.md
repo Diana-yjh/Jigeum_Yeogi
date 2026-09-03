@@ -104,3 +104,5 @@ class DayAttendance {
 
 ## 공용
 - 달력 셀·요일 헤더: `lib/features/calendar/widgets/calendar_cells.dart`.
+
+- 선생님이 2명 이상이면 선택 날짜 상세의 기록 셀을 선생님 구분색 테두리로 감싸고, 테두리 선 위에 닉네임을 걸쳐 표시한다(legend 스타일). 테두리가 있을 때는 블록 사이 구분선 대신 간격만 둔다.

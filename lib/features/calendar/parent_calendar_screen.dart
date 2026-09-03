@@ -397,26 +397,27 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: Text(dateText, style: dateStyle)),
-                // 선생님 구분 — 카드 오른쪽 위(pill 왼쪽).
-                if (teacherLabelOf(r.teacherCode) != null) ...[
-                  Text(teacherLabelOf(r.teacherCode)!,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: teacherColorOf(r.teacherCode))),
-                  const SizedBox(width: AppSpace.sm),
-                ],
+                Text(dateText, style: dateStyle),
                 isMakeup
                     ? const StatusPill.makeup()
                     : const StatusPill.regular(),
               ],
             ),
             const SizedBox(height: AppSpace.md),
-            _StayRow(record: r, color: AppColors.primaryDeep),
-            const SizedBox(height: AppSpace.sm),
-            _AxisCaption(record: r),
+            _TeacherOutline(
+              label: teacherLabelOf(r.teacherCode),
+              color: teacherColorOf(r.teacherCode),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _StayRow(record: r, color: AppColors.primaryDeep),
+                  const SizedBox(height: AppSpace.sm),
+                  _AxisCaption(record: r),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -434,18 +435,68 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
           const SizedBox(height: AppSpace.md),
           for (var i = 0; i < recs.length; i++) ...[
             if (i > 0)
-              const Divider(height: AppSpace.lg, color: AppColors.cardBorder),
-            _ChildStayBlock(
-              record: recs[i],
-              student: studentOf[recs[i].studentId],
-              color: colorOf[recs[i].studentId] ?? AppColors.primary,
-              dayCode: dayCode,
-              teacherLabel: teacherLabelOf(recs[i].teacherCode),
-              teacherColor: teacherColorOf(recs[i].teacherCode),
+              // 테두리가 있으면 구분선 대신 간격만 둔다.
+              if (teacherLabelOf(recs[i].teacherCode) != null)
+                const SizedBox(height: AppSpace.sm)
+              else
+                const Divider(height: AppSpace.lg, color: AppColors.cardBorder),
+            _TeacherOutline(
+              label: teacherLabelOf(recs[i].teacherCode),
+              color: teacherColorOf(recs[i].teacherCode),
+              child: _ChildStayBlock(
+                record: recs[i],
+                student: studentOf[recs[i].studentId],
+                color: colorOf[recs[i].studentId] ?? AppColors.primary,
+                dayCode: dayCode,
+              ),
             ),
           ],
         ],
       ),
+    );
+  }
+}
+
+/// 선생님 구분 테두리 — 기록 셀을 선생님 색 테두리로 감싸고, 테두리 선
+/// 위에 닉네임을 걸쳐 보여준다(legend 스타일). label이 없으면 child 그대로.
+class _TeacherOutline extends StatelessWidget {
+  final String? label;
+  final Color color;
+  final Widget child;
+  const _TeacherOutline(
+      {required this.label, required this.color, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    if (label == null) return child;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 8),
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(
+              AppSpace.sm + 4, AppSpace.md, AppSpace.sm + 4, AppSpace.sm + 4),
+          decoration: BoxDecoration(
+            border:
+                Border.all(color: color.withValues(alpha: 0.55), width: 1.2),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: child,
+        ),
+        Positioned(
+          left: 12,
+          top: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            // 상세 카드 배경과 같은 색으로 테두리 선을 끊어 보이게 한다.
+            color: AppColors.card,
+            child: Text(label!,
+                style: TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -456,15 +507,11 @@ class _ChildStayBlock extends StatelessWidget {
   final Student? student;
   final Color color;
   final String dayCode;
-  final String? teacherLabel; // 선생님 2명 이상일 때만 전달
-  final Color? teacherColor;
   const _ChildStayBlock({
     required this.record,
     required this.student,
     required this.color,
     required this.dayCode,
-    this.teacherLabel,
-    this.teacherColor,
   });
 
   @override
@@ -481,15 +528,6 @@ class _ChildStayBlock extends StatelessWidget {
               child: Text(student?.name ?? '우리 아이',
                   style: AppText.cardTitle, overflow: TextOverflow.ellipsis),
             ),
-            // 선생님 구분 — 블록 오른쪽 위(pill 왼쪽).
-            if (teacherLabel != null) ...[
-              Text(teacherLabel!,
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: teacherColor ?? AppColors.textSub)),
-              const SizedBox(width: AppSpace.sm),
-            ],
             isMakeup ? const StatusPill.makeup() : const StatusPill.regular(),
           ],
         ),
