@@ -72,6 +72,16 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
         directory.length >= 2 ? directory[code] : null;
     Color teacherColorOf(String code) => _deepen(AppColors.teacherColor(
         stored: user?.teacherColors[code], index: teacherKeys.indexOf(code)));
+    // 날짜 셀 오른쪽 위 도트 — 그 날 기록의 선생님별 원색(중복 제거).
+    List<Color> teacherDotsOf(List<AttendanceRecord> recs) {
+      if (directory.length < 2) return const [];
+      final codes = {for (final r in recs) r.teacherCode}.toList()..sort();
+      return [
+        for (final c in codes)
+          AppColors.teacherColor(
+              stored: user?.teacherColors[c], index: teacherKeys.indexOf(c)),
+      ];
+    }
 
     // 날짜별 등원 기록(아이 순서대로).
     final byDay = <int, List<AttendanceRecord>>{};
@@ -103,7 +113,7 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
                 if (v < -200) _changeMonth(1);
                 if (v > 200) _changeMonth(-1);
               },
-              child: _grid(byDay, selected, colorOf),
+              child: _grid(byDay, selected, colorOf, teacherDotsOf),
             ),
             const SizedBox(height: AppSpace.md),
             _detail(
@@ -225,8 +235,11 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
   }
 
   // ── 달력 그리드 ──
-  Widget _grid(Map<int, List<AttendanceRecord>> byDay, DateTime selected,
-      Map<String, Color> colorOf) {
+  Widget _grid(
+      Map<int, List<AttendanceRecord>> byDay,
+      DateTime selected,
+      Map<String, Color> colorOf,
+      List<Color> Function(List<AttendanceRecord>) teacherDotsOf) {
     const dows = ['일', '월', '화', '수', '목', '금', '토'];
     final leading = _month.weekday % 7; // 일요일 시작 기준 앞 빈칸
     final daysInMonth = DateTime(_month.year, _month.month + 1, 0).day;
@@ -259,7 +272,7 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
                 for (var c = 0; c < 7; c++)
                   Expanded(
                     child: _cell(r * 7 + c - leading + 1, daysInMonth, byDay,
-                        selected, now, colorOf),
+                        selected, now, colorOf, teacherDotsOf),
                   ),
               ],
             ),
@@ -274,7 +287,8 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
       Map<int, List<AttendanceRecord>> byDay,
       DateTime selected,
       DateTime now,
-      Map<String, Color> colorOf) {
+      Map<String, Color> colorOf,
+      List<Color> Function(List<AttendanceRecord>) teacherDotsOf) {
     // 앞뒤 달 날짜.
     if (day < 1 || day > daysInMonth) {
       final outDate = DateTime(_month.year, _month.month, day);
@@ -292,6 +306,7 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
       for (final r in byDay[day] ?? const <AttendanceRecord>[])
         colorOf[r.studentId] ?? AppColors.primary,
     ];
+    final cornerDots = teacherDotsOf(byDay[day] ?? const []);
     final isSelected = selected.day == day;
     final isToday = now.year == _month.year &&
         now.month == _month.month &&
@@ -299,10 +314,14 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
 
     final Widget body = isSelected
         ? _cellBody('$day',
-            numberColor: Colors.white, selectedCircle: true, dots: dots)
+            numberColor: Colors.white,
+            selectedCircle: true,
+            dots: dots,
+            cornerDots: cornerDots)
         : _cellBody('$day',
             numberColor: isToday ? AppColors.primary : AppColors.textMain,
-            dots: dots);
+            dots: dots,
+            cornerDots: cornerDots);
 
     return _CellButton(
       onTap: () =>
@@ -315,11 +334,11 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
   Widget _cellBody(String number,
       {required Color numberColor,
       bool selectedCircle = false,
-      required List<Color> dots}) {
+      required List<Color> dots,
+      List<Color> cornerDots = const []}) {
     final shown = dots.take(4).toList();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Column(
+    final corner = cornerDots.take(3).toList();
+    final column = Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           CalendarDayNumber(
@@ -347,6 +366,29 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
               ],
             ),
           ),
+        ],
+      );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          column,
+          // 선생님 구분 — 셀 오른쪽 위 작은 도트(선생님 2명 이상일 때만).
+          if (corner.isNotEmpty)
+            Positioned(
+              top: -2,
+              right: 2,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var i = 0; i < corner.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 2),
+                    _Dot(color: corner[i], size: 5),
+                  ],
+                ],
+              ),
+            ),
         ],
       ),
     );

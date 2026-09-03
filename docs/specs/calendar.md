@@ -104,3 +104,5 @@ class DayAttendance {
 
 ## 공용
 - 달력 셀·요일 헤더: `lib/features/calendar/widgets/calendar_cells.dart`.
+
+- 선생님이 2명 이상이면 날짜 셀 오른쪽 위에 그 날 기록의 선생님별 구분색 도트(최대 3개, 코드 정렬 순)를 표시한다. 아래쪽 도트(아이 색)와 별개.
