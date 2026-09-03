@@ -422,8 +422,12 @@ class _ParentSettings extends ConsumerWidget {
                         .copyWith(color: AppColors.textMain)),
               ),
               GestureDetector(
-                onTap: () =>
-                    _confirmRemoveFromClass(context, ref, c, e.value),
+                onTap: () => _confirmRemoveFromClass(context, ref, c, e.value,
+                    // 다른 반 수강이 없으면 삭제 대신 연결 해제(아이 보존).
+                    lastEnrollment: !children.any((x) =>
+                        x.id != c.id &&
+                        x.name.trim() == c.name.trim() &&
+                        x.teacherCode.isNotEmpty)),
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: AppSpace.xs),
                   child: Icon(Icons.close,
@@ -572,14 +576,19 @@ class _ParentSettings extends ConsumerWidget {
 
 
 
-  /// 반에서 빼기 — 해당 수강 문서만 삭제(그 반 출결 기록도 함께).
+  /// 반에서 빼기.
+  /// 다른 반에도 있는 아이는 이 수강만 삭제하고, 유일한 반이면 삭제 대신
+  /// 연결 해제(teacherCode 비움) — 아이와 지난 기록이 학부모 앱에 남는다.
   Future<void> _confirmRemoveFromClass(BuildContext context, WidgetRef ref,
-      Student child, String teacherLabel) async {
+      Student child, String teacherLabel,
+      {required bool lastEnrollment}) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('${child.name} · $teacherLabel'),
-        content: const Text('이 반에서 아이를 뺄까요?\n이 반의 출결 기록도 함께 삭제됩니다.'),
+        content: Text(lastEnrollment
+            ? '이 반에서 아이를 뺄까요?\n아이와 지난 기록은 우리 아이 목록에 남아요.'
+            : '이 반에서 아이를 뺄까요?\n이 반의 출결 기록도 함께 삭제됩니다.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -595,7 +604,11 @@ class _ParentSettings extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
-      await ref.read(authRepositoryProvider).deleteChild(child.id);
+      if (lastEnrollment) {
+        await ref.read(authRepositoryProvider).unlinkStudent(child.id);
+      } else {
+        await ref.read(authRepositoryProvider).deleteChild(child.id);
+      }
     } catch (_) {
       if (context.mounted) _snack(context, '삭제 중 문제가 발생했어요.');
     }
