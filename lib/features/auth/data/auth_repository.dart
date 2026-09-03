@@ -111,6 +111,14 @@ class AuthRepository {
     }, SetOptions(merge: true));
   }
 
+  /// 선생님 구분색 저장(ARGB int).
+  Future<void> setTeacherColor(String uid, String code, int color) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .set({'teacherColors': {code: color}}, SetOptions(merge: true));
+  }
+
   /// 선생님 연결 해제. 그 선생님 소속 자녀가 있으면 화면에서 먼저 막는다.
   /// [clearLegacy]가 참이면 구버전 호환 필드(teacherCode)도 함께 지운다 —
   /// 남겨두면 화면이 그 코드를 다시 파생해 해제가 안 된 것처럼 보인다.
@@ -118,6 +126,7 @@ class AuthRepository {
       {bool clearLegacy = false}) {
     return _db.collection('users').doc(uid).update({
       'teachers.$code': FieldValue.delete(),
+      'teacherColors.$code': FieldValue.delete(),
       if (clearLegacy) 'teacherCode': FieldValue.delete(),
     });
   }

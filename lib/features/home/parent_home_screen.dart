@@ -9,10 +9,22 @@ import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart
 import 'package:jigeum_yeogi/features/notifications/notification_list_screen.dart';
 import 'package:jigeum_yeogi/features/notifications/state/notification_providers.dart';
 import 'package:jigeum_yeogi/features/auth/state/auth_providers.dart';
+import 'package:jigeum_yeogi/models/app_user.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 import 'package:jigeum_yeogi/shared/widgets/status_pill.dart';
 import 'package:jigeum_yeogi/shared/widgets/app_background.dart';
+
+/// [directory]의 정렬 순서와 저장된 사용자 지정 색으로 선생님 색을 정한다.
+/// 선생님이 1명뿐이거나 연결이 없으면 null(기본 코랄 유지).
+Color? _teacherColorFor(
+    AppUser? user, Map<String, String> directory, String code) {
+  if (directory.length < 2 || !directory.containsKey(code)) return null;
+  return AppColors.teacherColor(
+    stored: user?.teacherColors[code],
+    index: directory.keys.toList().indexOf(code),
+  );
+}
 
 /// 학부모 홈 — "우리 아이가 지금 어디 있는지"가 1초 안에 읽히는 화면.
 class ParentHomeScreen extends ConsumerWidget {
@@ -45,9 +57,13 @@ class ParentHomeScreen extends ConsumerWidget {
     final child = children.isNotEmpty ? children.first : null;
     final today = ref.watch(childTodayRecordProvider).value;
     final week = ref.watch(childWeekRecordsProvider).value ?? const [];
-    final directory = ref.watch(appUserProvider).value?.teacherDirectory(
-            children.map((c) => c.teacherCode)) ??
-        const <String, String>{};
+    final appUser = ref.watch(appUserProvider).value;
+    final directory =
+        appUser?.teacherDirectory(children.map((c) => c.teacherCode)) ??
+            const <String, String>{};
+    final tint = child == null
+        ? null
+        : _teacherColorFor(appUser, directory, child.teacherCode);
 
     return AppScaffold(
       body: SafeArea(
@@ -58,10 +74,11 @@ class ParentHomeScreen extends ConsumerWidget {
             _Header(name: child?.name ?? '연결된 자녀 없음'),
             const SizedBox(height: AppSpace.lg),
             if (child != null && directory.length >= 2) ...[
-              _TeacherChip(directory: directory, code: child.teacherCode),
+              _TeacherChip(
+                  directory: directory, code: child.teacherCode, color: tint),
               const SizedBox(height: AppSpace.sm),
             ],
-            _HeroCard(record: today),
+            _HeroCard(record: today, tint: tint),
             const SizedBox(height: AppSpace.md),
             _WeekCard(child: child, week: week),
           ],
@@ -160,9 +177,11 @@ class _ChildSection extends ConsumerWidget {
         .where((r) => r.studentId == child.id)
         .toList();
     final children = ref.watch(childrenProvider).value ?? const <Student>[];
-    final directory = ref.watch(appUserProvider).value?.teacherDirectory(
-            children.map((c) => c.teacherCode)) ??
-        const <String, String>{};
+    final appUser = ref.watch(appUserProvider).value;
+    final directory =
+        appUser?.teacherDirectory(children.map((c) => c.teacherCode)) ??
+            const <String, String>{};
+    final tint = _teacherColorFor(appUser, directory, child.teacherCode);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,12 +195,13 @@ class _ChildSection extends ConsumerWidget {
             // 선생님이 여럿이면 어느 반 등원 상태인지 색·닉네임으로 구분.
             if (directory.length >= 2) ...[
               const SizedBox(width: AppSpace.sm),
-              _TeacherChip(directory: directory, code: child.teacherCode),
+              _TeacherChip(
+                  directory: directory, code: child.teacherCode, color: tint),
             ],
           ],
         ),
         const SizedBox(height: AppSpace.sm),
-        _HeroCard(record: today),
+        _HeroCard(record: today, tint: tint),
         const SizedBox(height: AppSpace.md),
         _WeekCard(child: child, week: week),
       ],
@@ -194,39 +214,28 @@ class _ChildSection extends ConsumerWidget {
 class _TeacherChip extends StatelessWidget {
   final Map<String, String> directory;
   final String code;
-  const _TeacherChip({required this.directory, required this.code});
+  final Color? color; // 선생님 구분색(사용자 지정 반영). null이면 연결 없음
+  const _TeacherChip(
+      {required this.directory, required this.code, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    final unlinked = code.isEmpty || !directory.containsKey(code);
-    final index = directory.keys.toList().indexOf(code);
-    final color =
-        unlinked ? AppColors.textFaint : AppColors.childColor(index);
+    final unlinked = color == null;
     final label = unlinked ? '연결된 선생님 없음' : directory[code]!;
 
+    // 눈에 띄게 — 구분색으로 꽉 채운 pill + 흰 글자.
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpace.sm + 2, vertical: 4),
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpace.md, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color ?? AppColors.chipNeutral,
         borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          Text(label,
-              style: AppText.caption.copyWith(
-                  color: unlinked ? AppColors.textSub : color,
-                  fontWeight: FontWeight.w600),
-              overflow: TextOverflow.ellipsis),
-        ],
-      ),
+      child: Text(label,
+          style: AppText.caption.copyWith(
+              color: unlinked ? AppColors.textSub : Colors.white,
+              fontWeight: FontWeight.w700),
+          overflow: TextOverflow.ellipsis),
     );
   }
 }
@@ -318,7 +327,8 @@ class _NotificationButton extends StatelessWidget {
 /// 오늘 상태 히어로 카드 — 화면에서 유일한 오렌지 면.
 class _HeroCard extends StatelessWidget {
   final AttendanceRecord? record;
-  const _HeroCard({required this.record});
+  final Color? tint; // 선생님 구분색 — 있으면 카드 그라디언트를 이 색으로
+  const _HeroCard({required this.record, this.tint});
 
   @override
   Widget build(BuildContext context) {
@@ -342,7 +352,7 @@ class _HeroCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(AppSpace.lg),
-      decoration: AppDecoration.hero(),
+      decoration: AppDecoration.hero(tint: tint),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

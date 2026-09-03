@@ -13,6 +13,7 @@ class AppUser {
   final bool notifyCheckOut; // 하원 알림 (기본 on)
   final DateTime? notificationsSeenAt; // 알림함을 마지막으로 연 시각(읽음 기준)
   final Map<String, String> teachers; // 학부모: 연결된 선생님 {코드: 닉네임}
+  final Map<String, int> teacherColors; // 학부모가 고른 선생님 색 {코드: ARGB}
 
   const AppUser({
     required this.uid,
@@ -25,6 +26,7 @@ class AppUser {
     this.notifyCheckOut = true,
     this.notificationsSeenAt,
     this.teachers = const {},
+    this.teacherColors = const {},
   });
 
   factory AppUser.fromMap(String uid, Map<String, dynamic> map) {
@@ -42,6 +44,10 @@ class AppUser {
       teachers: {
         for (final e in ((map['teachers'] as Map?) ?? const {}).entries)
           e.key as String: (e.value ?? '선생님') as String,
+      },
+      teacherColors: {
+        for (final e in ((map['teacherColors'] as Map?) ?? const {}).entries)
+          if (e.value is num) e.key as String: (e.value as num).toInt(),
       },
     );
   }
@@ -67,5 +73,6 @@ class AppUser {
         if (teacherCode != null) 'teacherCode': teacherCode,
         if (fcmToken != null) 'fcmToken': fcmToken,
         if (teachers.isNotEmpty) 'teachers': teachers,
+        if (teacherColors.isNotEmpty) 'teacherColors': teacherColors,
       };
 }

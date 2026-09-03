@@ -318,15 +318,36 @@ class _ParentSettings extends ConsumerWidget {
       Map<String, String> teachers, List<Student> children) {
     final uid = user.uid;
     final rows = <Widget>[];
+    final codes = teachers.keys.toList();
     for (final e in teachers.entries) {
       final code = e.key;
       final hasChildren = children.any((c) => c.teacherCode == code);
+      final color = AppColors.teacherColor(
+          stored: user.teacherColors[code], index: codes.indexOf(code));
       rows.add(SizedBox(
         height: 44,
         child: Row(
           children: [
-            const Icon(Icons.school_outlined,
-                size: 20, color: AppColors.primaryDeep),
+            // 구분색 도트 — 탭하면 색 선택.
+            GestureDetector(
+              onTap: () => showDialog(
+                context: context,
+                builder: (_) => _TeacherColorDialog(
+                    uid: uid, code: code, current: color),
+              ),
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.card, width: 2),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x22000000), blurRadius: 3),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(width: AppSpace.sm),
             Expanded(
               child: Text(e.value,
@@ -881,6 +902,67 @@ class _AddTeacherDialogState extends ConsumerState<_AddTeacherDialog> {
           onPressed: _saving ? null : _submit,
           style: TextButton.styleFrom(foregroundColor: AppColors.primaryDeep),
           child: const Text('추가'),
+        ),
+      ],
+    );
+  }
+}
+
+/// 선생님 구분색 선택 — 프리셋 팔레트에서 하나.
+class _TeacherColorDialog extends ConsumerWidget {
+  final String uid;
+  final String code;
+  final Color current;
+  const _TeacherColorDialog(
+      {required this.uid, required this.code, required this.current});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AlertDialog(
+      title: const Text('구분색 선택'),
+      content: Wrap(
+        spacing: AppSpace.md,
+        runSpacing: AppSpace.md,
+        children: [
+          for (final c in AppColors.teacherPalette)
+            GestureDetector(
+              onTap: () async {
+                try {
+                  await ref
+                      .read(authRepositoryProvider)
+                      .setTeacherColor(uid, code, c.toARGB32());
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('저장 중 문제가 발생했어요.')));
+                  }
+                }
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: c,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: c.toARGB32() == current.toARGB32()
+                        ? AppColors.textMain
+                        : Colors.transparent,
+                    width: 2.5,
+                  ),
+                ),
+                child: c.toARGB32() == current.toARGB32()
+                    ? const Icon(Icons.check, size: 20, color: Colors.white)
+                    : null,
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('닫기'),
         ),
       ],
     );

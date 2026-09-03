@@ -33,6 +33,37 @@ abstract class AppColors {
   static Color childColor(int index) =>
       childPalette[index % childPalette.length];
 
+  // 선생님 구분색 프리셋 — 학부모가 선생님마다 하나를 고른다.
+  // 파스텔 톤과 어울리는 중채도 8색.
+  static const teacherPalette = [
+    primary, // 코랄
+    sageDeep, // 세이지
+    skyDeep, // 더스티 블루
+    plumDeep, // 더스티 플럼
+    Color(0xFFC29A4B), // 머스터드
+    Color(0xFF4E8F87), // 틸
+    Color(0xFFC86B8C), // 로즈
+    Color(0xFF7A8699), // 슬레이트
+  ];
+
+  /// 선생님 색 — 학부모가 고른 값([stored], ARGB int)이 있으면 그것, 없으면
+  /// 연결 순서([index])에 따라 자동 배정.
+  static Color teacherColor({int? stored, required int index}) =>
+      stored != null ? Color(stored) : childColor(index);
+
+  /// 단색에서 히어로 카드용 그라디언트를 만든다(살짝 밝게 → 살짝 어둡게).
+  static LinearGradient gradientFor(Color base) {
+    final hsl = HSLColor.fromColor(base);
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        hsl.withLightness((hsl.lightness + 0.06).clamp(0.0, 1.0)).toColor(),
+        hsl.withLightness((hsl.lightness - 0.05).clamp(0.0, 1.0)).toColor(),
+      ],
+    );
+  }
+
   /// 히어로 카드용 코랄 그라디언트.
   static const primaryGradient = LinearGradient(
     begin: Alignment.topLeft,

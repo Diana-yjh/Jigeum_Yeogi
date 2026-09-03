@@ -27,10 +27,11 @@ abstract class AppDecoration {
     );
   }
 
-  /// 그라디언트 히어로 카드.
-  static BoxDecoration hero({double radius = AppRadius.card}) {
+  /// 그라디언트 히어로 카드. [tint]를 주면 그 색 기반 그라디언트(선생님 구분색).
+  static BoxDecoration hero({double radius = AppRadius.card, Color? tint}) {
     return BoxDecoration(
-      gradient: AppColors.primaryGradient,
+      gradient:
+          tint == null ? AppColors.primaryGradient : AppColors.gradientFor(tint),
       borderRadius: BorderRadius.circular(radius),
       boxShadow: AppShadow.soft,
     );
