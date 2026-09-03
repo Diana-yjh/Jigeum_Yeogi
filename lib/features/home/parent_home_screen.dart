@@ -88,7 +88,8 @@ class ParentHomeScreen extends ConsumerWidget {
           children: [
             _Header(name: child?.name ?? '연결된 자녀 없음'),
             const SizedBox(height: AppSpace.lg),
-            if (child != null && directory.length >= 2) ...[
+            if (child != null &&
+                (directory.length >= 2 || child.teacherCode.isEmpty)) ...[
               // ListView 직속이면 가로로 꽉 늘어나므로 내용 크기로 감싼다.
               Align(
                 alignment: Alignment.centerLeft,
@@ -97,9 +98,18 @@ class ParentHomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpace.sm),
             ],
-            _HeroCard(record: today, tint: tint),
-            const SizedBox(height: AppSpace.md),
-            _WeekCard(child: child, week: week, accent: tint),
+            if (child == null)
+              const _UnlinkedCard(
+                  message: '설정 → 우리 아이에서 아이를 추가하면\n등원 현황이 여기에 표시돼요.')
+            else if (child.teacherCode.isEmpty)
+              const _UnlinkedCard(
+                  message:
+                      '선생님과 연결되면 등원 현황이 표시돼요.\n설정 → 선생님 → 이 반에 아이 추가로 연결할 수 있어요.')
+            else ...[
+              _HeroCard(record: today, tint: tint),
+              const SizedBox(height: AppSpace.md),
+              _WeekCard(child: child, week: week, accent: tint),
+            ],
           ],
         ),
       ),
@@ -203,6 +213,11 @@ class _ChildSection extends ConsumerWidget {
     final directory =
         appUser?.teacherDirectory(children.map((c) => c.teacherCode)) ??
             const <String, String>{};
+    // 연결된 수강이 하나라도 있으면 해제된 수강(빈 코드)은 숨긴다.
+    // 전부 해제 상태면 하나만 남겨 '연결된 선생님 없음' 안내를 보여준다.
+    final linked =
+        enrollments.where((e) => e.teacherCode.isNotEmpty).toList();
+    final visible = linked.isNotEmpty ? linked : [enrollments.first];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,10 +227,29 @@ class _ChildSection extends ConsumerWidget {
               style: AppText.sectionTitle, overflow: TextOverflow.ellipsis),
           const SizedBox(height: AppSpace.sm),
         ],
-        for (var i = 0; i < enrollments.length; i++) ...[
+        for (var i = 0; i < visible.length; i++) ...[
           Builder(builder: (context) {
-            final e = enrollments[i];
+            final e = visible[i];
             final tint = _teacherColorFor(appUser, directory, e.teacherCode);
+            // 연결 해제된 수강 — 기본 등원 카드를 만들지 않고 안내만.
+            if (e.teacherCode.isEmpty) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _TeacherChip(
+                        directory: directory,
+                        code: e.teacherCode,
+                        color: null),
+                  ),
+                  const SizedBox(height: AppSpace.sm),
+                  const _UnlinkedCard(
+                      message:
+                          '선생님과 연결되면 등원 현황이 표시돼요.\n설정 → 선생님 → 이 반에 아이 추가로 연결할 수 있어요.'),
+                ],
+              );
+            }
             final today = ref.watch(studentTodayRecordProvider(e.id)).value;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,13 +272,31 @@ class _ChildSection extends ConsumerWidget {
                   week: week.where((r) => r.studentId == e.id).toList(),
                   accent: tint,
                 ),
-                if (i < enrollments.length - 1)
+                if (i < visible.length - 1)
                   const SizedBox(height: AppSpace.lg),
               ],
             );
           }),
         ],
       ],
+    );
+  }
+}
+
+/// 연결된 선생님이 없을 때 기본 등원 카드 대신 보여주는 안내.
+class _UnlinkedCard extends StatelessWidget {
+  final String message;
+  const _UnlinkedCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpace.md),
+      decoration: AppDecoration.card(),
+      child: Text(message,
+          style: const TextStyle(
+              fontSize: 13, height: 1.5, color: AppColors.textSub)),
     );
   }
 }
