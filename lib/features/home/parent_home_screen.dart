@@ -26,28 +26,42 @@ Color? _teacherColorFor(
   );
 }
 
+/// 같은 이름의 수강(학생 문서)을 한 아이로 묶는다 — 한 아이가 여러 선생님에게
+/// 배우면 선생님별 문서가 따로 있으므로, 화면에서는 이름 기준으로 합쳐 보여준다.
+List<List<Student>> _groupByName(List<Student> children) {
+  final map = <String, List<Student>>{};
+  for (final c in children) {
+    map.putIfAbsent(c.name.trim(), () => []).add(c);
+  }
+  return map.values.toList();
+}
+
 /// 학부모 홈 — "우리 아이가 지금 어디 있는지"가 1초 안에 읽히는 화면.
 class ParentHomeScreen extends ConsumerWidget {
   const ParentHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final children = ref.watch(childrenProvider).value ?? const [];
+    final children =
+        ref.watch(childrenProvider).value ?? const <Student>[];
+    final groups = _groupByName(children);
 
-    // 수강 2건 이상이면 한눈에 보이는 리스트 — 카드 탭으로 상세(타임라인·주간) 펼침.
+    // 수강이 2건 이상이면(아이 여럿 또는 한 아이 다중 수강) 페이저/묶음 화면.
     if (children.length >= 2) {
       return AppScaffold(
         body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpace.md, AppSpace.md, AppSpace.md, AppSpace.xl),
+          child: Column(
             children: [
-              const _Header(name: '우리 아이들'),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpace.md, AppSpace.md, AppSpace.md, 0),
+                child: _Header(
+                    name: groups.length >= 2
+                        ? '우리 아이들'
+                        : groups.first.first.name),
+              ),
               const SizedBox(height: AppSpace.lg),
-              for (final c in children) ...[
-                _EnrollmentTile(child: c),
-                const SizedBox(height: AppSpace.md),
-              ],
+              Expanded(child: _ChildPager(groups: groups)),
             ],
           ),
         ),
@@ -89,146 +103,136 @@ class ParentHomeScreen extends ConsumerWidget {
   }
 }
 
-/// 수강 한 건의 컴팩트 상태 카드 — 탭하면 아래로 타임라인·주간 카드가 펼쳐진다.
-/// 수업 중이면 선생님 색 그라디언트, 그 외엔 흰 카드.
-class _EnrollmentTile extends ConsumerStatefulWidget {
-  final Student child;
-  const _EnrollmentTile({required this.child});
+/// 아이별 구획을 좌우 스와이프로 넘기는 페이저.
+/// 아이가 늘어도 화면이 세로로 길어지지 않게 한 번에 한 명씩 보여준다.
+class _ChildPager extends StatefulWidget {
+  final List<List<Student>> groups; // 이름으로 묶인 수강들
+  const _ChildPager({required this.groups});
 
   @override
-  ConsumerState<_EnrollmentTile> createState() => _EnrollmentTileState();
+  State<_ChildPager> createState() => _ChildPagerState();
 }
 
-class _EnrollmentTileState extends ConsumerState<_EnrollmentTile> {
-  bool _open = false;
+class _ChildPagerState extends State<_ChildPager> {
+  final _controller = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final child = widget.child;
-    final record = ref.watch(studentTodayRecordProvider(child.id)).value;
-    final week = (ref.watch(childWeekRecordsProvider).value ?? const [])
-        .where((r) => r.studentId == child.id)
-        .toList();
+    // 자녀가 삭제되면 현재 페이지가 범위를 벗어날 수 있다.
+    final index = _page.clamp(0, widget.groups.length - 1);
+
+    return Column(
+      children: [
+        Expanded(
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: widget.groups.length,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (context, i) => SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpace.md, 0, AppSpace.md, AppSpace.md),
+              child: _ChildSection(
+                enrollments: widget.groups[i],
+                showName: widget.groups.length >= 2,
+              ),
+            ),
+          ),
+        ),
+        if (widget.groups.length >= 2) ...[
+          const SizedBox(height: AppSpace.sm),
+          _PageDots(count: widget.groups.length, index: index),
+        ],
+        const SizedBox(height: AppSpace.md),
+      ],
+    );
+  }
+}
+
+/// 페이저 위치 표시 — 현재 페이지만 길쭉한 알약으로.
+class _PageDots extends StatelessWidget {
+  final int count;
+  final int index;
+  const _PageDots({required this.count, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (var i = 0; i < count; i++)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            width: i == index ? 18 : 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: i == index ? AppColors.primary : AppColors.cardBorder,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// 한 아이의 홈 구획 — 같은 이름의 수강들을 한 페이지에 묶는다.
+/// 수강이 하나면 기존과 동일(히어로 + 주간 카드), 여럿이면 선생님별
+/// 칩+히어로를 나열하고 주간 출석은 선생님별 요약으로 합친다.
+class _ChildSection extends ConsumerWidget {
+  final List<Student> enrollments; // 같은 이름의 수강(선생님별 문서)
+  final bool showName;
+  const _ChildSection({required this.enrollments, this.showName = true});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final week = ref.watch(childWeekRecordsProvider).value ?? const [];
     final children = ref.watch(childrenProvider).value ?? const <Student>[];
     final appUser = ref.watch(appUserProvider).value;
     final directory =
         appUser?.teacherDirectory(children.map((c) => c.teacherCode)) ??
             const <String, String>{};
-    final tint = _teacherColorFor(appUser, directory, child.teacherCode);
-
-    final checkIn = record?.checkInAt;
-    final checkOut = record?.checkOutAt;
-    final hasIn = checkIn != null;
-    final hasOut = checkOut != null;
-    final inClass = hasIn && !hasOut;
-
-    final String pill;
-    final String subtitle;
-    if (hasOut) {
-      pill = '하원 완료';
-      subtitle = '${clock(checkIn!)} 등원 → ${clock(checkOut)} 하원';
-    } else if (hasIn) {
-      pill = '학원에 있어요';
-      subtitle = '${clock(checkIn)}부터 학원에 있어요';
-    } else {
-      pill = '등원 전';
-      subtitle = '아직 등원 전이에요';
-    }
-
-    final accent = tint ?? AppColors.primary;
-    final onColor = inClass ? Colors.white : AppColors.textMain;
-    final subColor = inClass ? Colors.white70 : AppColors.textSub;
-    final teacherLabel =
-        directory.length >= 2 ? directory[child.teacherCode] : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            onTap: () => setState(() => _open = !_open),
-            child: Container(
-              padding: const EdgeInsets.all(AppSpace.md),
-              decoration: inClass
-                  ? AppDecoration.hero(tint: tint)
-                  : AppDecoration.card(),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: inClass
-                        ? Colors.white24
-                        : accent.withValues(alpha: 0.14),
-                    child: Text(child.name.characters.first,
-                        style: AppText.cardTitle.copyWith(
-                            color: inClass ? Colors.white : accent)),
-                  ),
-                  const SizedBox(width: AppSpace.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(child.name,
-                                  style: AppText.cardTitle
-                                      .copyWith(color: onColor),
-                                  overflow: TextOverflow.ellipsis),
-                            ),
-                            // 선생님이 여럿이면 어느 반인지 색·닉네임으로.
-                            if (teacherLabel != null) ...[
-                              const SizedBox(width: AppSpace.sm),
-                              Flexible(
-                                child: Text(teacherLabel,
-                                    style: AppText.caption.copyWith(
-                                        color: inClass
-                                            ? Colors.white70
-                                            : accent,
-                                        fontWeight: FontWeight.w600),
-                                    overflow: TextOverflow.ellipsis),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(subtitle,
-                            style: AppText.caption.copyWith(color: subColor)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpace.sm),
-                  inClass
-                      ? StatusPill.onHero(pill)
-                      : StatusPill(
-                          label: pill,
-                          background: hasOut
-                              ? AppColors.chipNeutral
-                              : accent.withValues(alpha: 0.14),
-                          foreground:
-                              hasOut ? AppColors.textSub : accent,
-                        ),
-                  AnimatedRotation(
-                    turns: _open ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 180),
-                    child: Icon(Icons.expand_more,
-                        size: 20,
-                        color: inClass ? Colors.white70 : AppColors.textFaint),
-                  ),
+        if (showName) ...[
+          Text(enrollments.first.name,
+              style: AppText.sectionTitle, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: AppSpace.sm),
+        ],
+        for (var i = 0; i < enrollments.length; i++) ...[
+          Builder(builder: (context) {
+            final e = enrollments[i];
+            final tint = _teacherColorFor(appUser, directory, e.teacherCode);
+            final today = ref.watch(studentTodayRecordProvider(e.id)).value;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (directory.length >= 2) ...[
+                  _TeacherChip(
+                      directory: directory, code: e.teacherCode, color: tint),
+                  const SizedBox(height: AppSpace.sm),
                 ],
-              ),
-            ),
-          ),
-        ),
-        // 펼침 — 타임라인 히어로 + 이번 주 출석(기존 그대로).
-        if (_open) ...[
-          const SizedBox(height: AppSpace.sm),
-          _HeroCard(record: record, tint: tint),
-          const SizedBox(height: AppSpace.sm),
-          _WeekCard(child: child, week: week),
+                _HeroCard(record: today, tint: tint),
+                const SizedBox(height: AppSpace.sm),
+                // 이번 주 출석 — 수강마다 기존 카드 그대로(합치지 않는다).
+                _WeekCard(
+                  child: e,
+                  week: week.where((r) => r.studentId == e.id).toList(),
+                ),
+                if (i < enrollments.length - 1)
+                  const SizedBox(height: AppSpace.lg),
+              ],
+            );
+          }),
         ],
       ],
     );

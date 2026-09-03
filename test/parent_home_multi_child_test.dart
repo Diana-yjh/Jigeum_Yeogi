@@ -1,7 +1,4 @@
-// 학부모 홈 — 자녀가 여러 명일 때.
-//
-// 아이마다 하원 타임라인과 이번 주 출석이 모두 보여야 하고(예전에는 한 줄짜리
-// 상태 카드만 남고 두 섹션이 사라졌다), 아이 사이는 좌우 스와이프로 넘긴다.
+// 학부모 홈 — 아이(이름 그룹)별 좌우 스와이프, 아이 안에서는 수강별로 항상 펼쳐진 리스트.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,35 +12,42 @@ import 'package:jigeum_yeogi/features/notifications/state/notification_providers
 import 'package:jigeum_yeogi/models/app_user.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
-import 'package:jigeum_yeogi/models/user_role.dart';
 import 'package:jigeum_yeogi/models/student.dart';
+import 'package:jigeum_yeogi/models/user_role.dart';
 
-const _schedule = {
+const _threeDays = {
   'mon': ScheduleEntry(time: '15:00', type: ClassType.regular),
   'wed': ScheduleEntry(time: '15:00', type: ClassType.regular),
   'fri': ScheduleEntry(time: '15:00', type: ClassType.regular),
 };
+const _oneDay = {'mon': ScheduleEntry(time: '17:00', type: ClassType.regular)};
 
-Student _student(String id, String name) => Student(
-      id: id,
-      name: name,
-      teacherCode: '123456',
-      parentUid: 'p1',
-      schedule: _schedule,
-    );
+const _user = AppUser(
+  uid: 'p1',
+  role: Role.parent,
+  name: '홍테스트',
+  email: 'p@test.com',
+  teachers: {'111111': '수학 김선생님', '222222': '피아노 이선생님'},
+);
 
-AttendanceRecord _record(String studentId, DateTime day,
-        {Duration? inAt, Duration? outAt}) =>
+Student _s(String id, String name, String code, Map<String, ScheduleEntry> sched) =>
+    Student(id: id, name: name, teacherCode: code, parentUid: 'p1', schedule: sched);
+
+AttendanceRecord _rec(String id, String code, DateTime day,
+        {int h = 15, bool out = false}) =>
     AttendanceRecord(
-      studentId: studentId,
+      studentId: id,
       date: dateKey(day),
-      teacherCode: '123456',
+      teacherCode: code,
       parentUid: 'p1',
-      checkInAt: inAt == null ? null : day.add(inAt),
-      checkOutAt: outAt == null ? null : day.add(outAt),
+      checkInAt: DateTime(day.year, day.month, day.day, h, 2),
+      checkOutAt: out ? DateTime(day.year, day.month, day.day, h + 2, 30) : null,
     );
 
-Future<void> _loadFonts() async {
+Future<void> _pump(WidgetTester tester,
+    {required List<Student> children,
+    required List<AttendanceRecord> week,
+    required Map<String, AttendanceRecord?> today}) async {
   final loader = FontLoader('GmarketSans');
   for (final p in [
     'assets/fonts/GmarketSansLight.otf',
@@ -53,84 +57,81 @@ Future<void> _loadFonts() async {
     loader.addFont(rootBundle.load(p));
   }
   await loader.load();
+
+  tester.view.physicalSize = const Size(1170, 3200);
+  tester.view.devicePixelRatio = 3.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        appUserProvider.overrideWith((r) => Stream.value(_user)),
+        childrenProvider.overrideWith((r) => Stream.value(children)),
+        childWeekRecordsProvider.overrideWith((r) => Stream.value(week)),
+        studentTodayRecordProvider
+            .overrideWith((r, id) => Stream.value(today[id])),
+        unreadNotificationCountProvider.overrideWith((r) => 0),
+      ],
+      child: MaterialApp(theme: AppTheme.light, home: const ParentHomeScreen()),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 void main() {
-  testWidgets('수강 리스트: 모든 아이 상태가 한눈에, 탭하면 타임라인·주간 카드 펼침',
-      (tester) async {
-    await _loadFonts();
-
+  testWidgets('아이 둘 → 좌우 스와이프, 페이지마다 그 아이 것만', (tester) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final monday = today.subtract(Duration(days: today.weekday - 1));
-    final tuesday = monday.add(const Duration(days: 1));
 
-    // 김테스트: 등원만(수업 중) / 박테스트: 하원까지 완료.
-    final inClass = _record('s1', today, inAt: const Duration(hours: 15, minutes: 2));
-    final done = _record('s2', today,
-        inAt: const Duration(hours: 15, minutes: 10),
-        outAt: const Duration(hours: 17, minutes: 30));
-
-    final week = [
-      _record('s1', monday, inAt: const Duration(hours: 15)),
-      _record('s1', tuesday, inAt: const Duration(hours: 15)),
-      _record('s2', monday, inAt: const Duration(hours: 15)),
-    ];
-
-    tester.view.physicalSize = const Size(1170, 3200);
-    tester.view.devicePixelRatio = 3.0;
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          appUserProvider.overrideWith((ref) => Stream.value(const AppUser(
-              uid: 'p1',
-              role: Role.parent,
-              name: '홍테스트',
-              email: 'p@test.com',
-              teachers: {'123456': '수학 김선생님', '654321': '피아노 이선생님'}))),
-          childrenProvider.overrideWith(
-              (ref) => Stream.value([_student('s1', '김테스트'), _student('s2', '박테스트')])),
-          childWeekRecordsProvider.overrideWith((ref) => Stream.value(week)),
-          studentTodayRecordProvider.overrideWith(
-              (ref, id) => Stream.value(id == 's1' ? inClass : done)),
-          unreadNotificationCountProvider.overrideWith((ref) => 0),
+    final kim = _rec('s1', '111111', today);
+    final park = _rec('s2', '111111', today, out: true);
+    await _pump(tester,
+        children: [
+          _s('s1', '김테스트', '111111', _threeDays),
+          _s('s2', '박테스트', '111111', _threeDays),
         ],
-        child: MaterialApp(theme: AppTheme.light, home: const ParentHomeScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
+        week: [kim, park, _rec('s1', '111111', monday)],
+        today: {'s1': kim, 's2': park});
 
-    // 스와이프 없이 모든 수강 상태가 한 화면에.
-    expect(find.byType(PageView), findsNothing);
+    // 페이저 — 첫 페이지엔 김테스트만.
+    expect(find.byType(PageView), findsOneWidget);
     expect(find.text('김테스트'), findsOneWidget);
-    expect(find.text('박테스트'), findsOneWidget);
-    expect(find.textContaining('부터 학원에 있어요'), findsOneWidget); // 수업 중
-    expect(find.textContaining('하원'), findsWidgets); // 하원 완료 상태줄
-
-    // 선생님 닉네임으로 반 구분(둘 다 수학 코드).
-    expect(find.text('수학 김선생님'), findsNWidgets(2));
-
-    // 접힌 상태에선 주간 카드 없음.
-    expect(find.text('이번 주 출석'), findsNothing);
-
-    // 김테스트 탭 → 히어로 타임라인 + 기존 주간 카드가 펼쳐진다.
-    await tester.tap(find.text('김테스트'));
-    await tester.pumpAndSettle();
-    expect(find.text('지금 학원에 있어요'), findsOneWidget);
+    expect(find.text('박테스트'), findsNothing);
     expect(find.text('이번 주 출석'), findsOneWidget);
-    expect(find.text('2 / 3회'), findsOneWidget); // 이 수강 것만(형제 미합산)
 
-    // 박테스트도 펼치면 각자 주간 카드 — 값이 갈린다.
-    await tester.tap(find.text('박테스트'));
+    // 옆으로 밀면 박테스트 — 주간 값이 그 아이 것으로 갈린다.
+    await tester.drag(find.byType(PageView), const Offset(-400, 0));
     await tester.pumpAndSettle();
+    expect(find.text('박테스트'), findsOneWidget);
+    expect(find.text('김테스트'), findsNothing);
+    expect(find.text('1 / 3회'), findsOneWidget);
+  });
+
+  testWidgets('한 아이 두 수강 → 한 페이지에 접히지 않는 리스트(히어로·주간 카드 각각)',
+      (tester) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final math = _rec('m1', '111111', today);
+    await _pump(tester,
+        children: [
+          _s('m1', '김테스트', '111111', _threeDays),
+          _s('pi1', '김테스트', '222222', _oneDay),
+        ],
+        week: [math],
+        today: {'m1': math, 'pi1': null});
+
+    // 그룹이 하나 → 헤더에 아이 이름, 페이지 안 이름 중복 없음.
+    expect(find.text('김테스트'), findsOneWidget);
+
+    // 수강별 칩 + 히어로 + 주간 카드가 모두 "펼쳐진 채" 보인다.
+    expect(find.text('수학 김선생님'), findsOneWidget);
+    expect(find.text('피아노 이선생님'), findsOneWidget);
+    expect(find.text('지금 학원에 있어요'), findsOneWidget);
+    expect(find.text('아직 등원 전이에요'), findsOneWidget);
     expect(find.text('이번 주 출석'), findsNWidgets(2));
     expect(find.text('1 / 3회'), findsOneWidget);
-
-    // 다시 탭하면 접힌다.
-    await tester.tap(find.text('김테스트'));
-    await tester.pumpAndSettle();
-    expect(find.text('2 / 3회'), findsNothing);
+    expect(find.text('0 / 1회'), findsOneWidget);
   });
 }
