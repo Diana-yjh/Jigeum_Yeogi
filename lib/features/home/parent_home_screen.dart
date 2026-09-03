@@ -95,7 +95,7 @@ class ParentHomeScreen extends ConsumerWidget {
             ],
             _HeroCard(record: today, tint: tint),
             const SizedBox(height: AppSpace.md),
-            _WeekCard(child: child, week: week),
+            _WeekCard(child: child, week: week, accent: tint),
           ],
         ),
       ),
@@ -227,6 +227,7 @@ class _ChildSection extends ConsumerWidget {
                 _WeekCard(
                   child: e,
                   week: week.where((r) => r.studentId == e.id).toList(),
+                  accent: tint,
                 ),
                 if (i < enrollments.length - 1)
                   const SizedBox(height: AppSpace.lg),
@@ -481,7 +482,18 @@ class _Timeline extends StatelessWidget {
 class _WeekCard extends StatelessWidget {
   final Student? child;
   final List<AttendanceRecord> week;
-  const _WeekCard({required this.child, required this.week});
+  final Color? accent; // 선생님 구분색 — 없으면 기본 코랄
+  const _WeekCard({required this.child, required this.week, this.accent});
+
+  /// 채움·테두리용 본색.
+  Color get _accent => accent ?? AppColors.primary;
+
+  /// 라벨·숫자용 진한 색 — 구분색을 살짝 어둡게(기본색이면 기존 primaryDeep).
+  Color get _accentDeep {
+    if (accent == null) return AppColors.primaryDeep;
+    final hsl = HSLColor.fromColor(accent!);
+    return hsl.withLightness((hsl.lightness - 0.12).clamp(0.0, 1.0)).toColor();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -511,14 +523,13 @@ class _WeekCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
+                  color: _accent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: Text(
                   denom > 0 ? '$attendedCount / $denom회' : '$attendedCount회',
                   style: AppText.caption.copyWith(
-                      color: AppColors.primaryDeep,
-                      fontWeight: FontWeight.w600),
+                      color: _accentDeep, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -551,12 +562,12 @@ class _WeekCard extends StatelessWidget {
     Color labelColor = AppColors.textSub;
     if (attended) {
       circle = _circle(
-          bg: AppColors.primary,
+          bg: _accent,
           child: const Icon(Icons.check, size: 15, color: Colors.white));
-      labelColor = AppColors.primaryDeep;
+      labelColor = _accentDeep;
     } else if (isScheduled && isToday) {
-      circle = _circle(border: Border.all(color: AppColors.primary, width: 2));
-      labelColor = AppColors.primaryDeep;
+      circle = _circle(border: Border.all(color: _accent, width: 2));
+      labelColor = _accentDeep;
     } else if (isScheduled && isPast) {
       circle = _circle(
           border: Border.all(color: AppColors.cardBorder, width: 1.5),
@@ -566,7 +577,7 @@ class _WeekCard extends StatelessWidget {
           _circle(border: Border.all(color: AppColors.cardBorder, width: 1.5));
     } else {
       circle = const SizedBox(width: 30, height: 30);
-      if (isToday) labelColor = AppColors.primaryDeep;
+      if (isToday) labelColor = _accentDeep;
     }
 
     return Column(
