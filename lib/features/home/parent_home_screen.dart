@@ -254,12 +254,13 @@ class _TeacherChip extends StatelessWidget {
     final unlinked = color == null;
     final label = unlinked ? '연결된 선생님 없음' : directory[code]!;
 
-    // 눈에 띄게 — 구분색으로 꽉 채운 pill + 흰 글자.
+    // 구분색 pill — 살짝 반투명하게 눌러 배경과 어우러지게, 글자는 흰색 유지.
     return Container(
       padding:
           const EdgeInsets.symmetric(horizontal: AppSpace.md, vertical: 5),
       decoration: BoxDecoration(
-        color: color ?? AppColors.chipNeutral,
+        color: (color ?? AppColors.chipNeutral)
+            .withValues(alpha: unlinked ? 1 : 0.72),
         borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Text(label,
