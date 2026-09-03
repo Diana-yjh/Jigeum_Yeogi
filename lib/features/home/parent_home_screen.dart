@@ -8,6 +8,7 @@ import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
 import 'package:jigeum_yeogi/features/notifications/notification_list_screen.dart';
 import 'package:jigeum_yeogi/features/notifications/state/notification_providers.dart';
+import 'package:jigeum_yeogi/features/auth/state/auth_providers.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 import 'package:jigeum_yeogi/shared/widgets/status_pill.dart';
@@ -44,6 +45,9 @@ class ParentHomeScreen extends ConsumerWidget {
     final child = children.isNotEmpty ? children.first : null;
     final today = ref.watch(childTodayRecordProvider).value;
     final week = ref.watch(childWeekRecordsProvider).value ?? const [];
+    final directory = ref.watch(appUserProvider).value?.teacherDirectory(
+            children.map((c) => c.teacherCode)) ??
+        const <String, String>{};
 
     return AppScaffold(
       body: SafeArea(
@@ -53,6 +57,10 @@ class ParentHomeScreen extends ConsumerWidget {
           children: [
             _Header(name: child?.name ?? '연결된 자녀 없음'),
             const SizedBox(height: AppSpace.lg),
+            if (child != null && directory.length >= 2) ...[
+              _TeacherChip(directory: directory, code: child.teacherCode),
+              const SizedBox(height: AppSpace.sm),
+            ],
             _HeroCard(record: today),
             const SizedBox(height: AppSpace.md),
             _WeekCard(child: child, week: week),
@@ -151,16 +159,74 @@ class _ChildSection extends ConsumerWidget {
     final week = (ref.watch(childWeekRecordsProvider).value ?? const [])
         .where((r) => r.studentId == child.id)
         .toList();
+    final children = ref.watch(childrenProvider).value ?? const <Student>[];
+    final directory = ref.watch(appUserProvider).value?.teacherDirectory(
+            children.map((c) => c.teacherCode)) ??
+        const <String, String>{};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(child.name, style: AppText.sectionTitle),
+        Row(
+          children: [
+            Flexible(
+              child: Text(child.name,
+                  style: AppText.sectionTitle, overflow: TextOverflow.ellipsis),
+            ),
+            // 선생님이 여럿이면 어느 반 등원 상태인지 색·닉네임으로 구분.
+            if (directory.length >= 2) ...[
+              const SizedBox(width: AppSpace.sm),
+              _TeacherChip(directory: directory, code: child.teacherCode),
+            ],
+          ],
+        ),
         const SizedBox(height: AppSpace.sm),
         _HeroCard(record: today),
         const SizedBox(height: AppSpace.md),
         _WeekCard(child: child, week: week),
       ],
+    );
+  }
+}
+
+/// 소속 선생님 칩 — 선생님 순서에 따른 색 도트 + 닉네임.
+/// 색은 [AppUser.teacherDirectory]의 정렬된 키 순서로 배정해 화면 간에 흔들리지 않는다.
+class _TeacherChip extends StatelessWidget {
+  final Map<String, String> directory;
+  final String code;
+  const _TeacherChip({required this.directory, required this.code});
+
+  @override
+  Widget build(BuildContext context) {
+    final unlinked = code.isEmpty || !directory.containsKey(code);
+    final index = directory.keys.toList().indexOf(code);
+    final color =
+        unlinked ? AppColors.textFaint : AppColors.childColor(index);
+    final label = unlinked ? '연결된 선생님 없음' : directory[code]!;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.sm + 2, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(label,
+              style: AppText.caption.copyWith(
+                  color: unlinked ? AppColors.textSub : color,
+                  fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis),
+        ],
+      ),
     );
   }
 }

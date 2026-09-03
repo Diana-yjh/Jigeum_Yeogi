@@ -191,16 +191,9 @@ class _ParentSettings extends ConsumerWidget {
       });
     }
 
-    // 연결된 선생님 {코드: 닉네임}. 저장된 맵 + (구버전 호환) 계정 코드·자녀 코드 병합.
-    final teachers = <String, String>{...user.teachers};
-    final legacyCodes = [
-      if (user.teacherCode != null) user.teacherCode!,
-      ...children.map((c) => c.teacherCode),
-    ];
-    for (final c in legacyCodes) {
-      // 빈 코드 = 선생님이 반에서 내보낸 아이(연결 없음) — 목록에 넣지 않는다.
-      if (c.isNotEmpty) teachers.putIfAbsent(c, () => '선생님');
-    }
+    // 연결된 선생님 {코드: 닉네임} — 저장 맵 + 구버전 필드·자녀 코드 병합(모델 헬퍼).
+    final teachers =
+        user.teacherDirectory(children.map((c) => c.teacherCode));
 
     // 우리 아이 섹션 행: 자녀 이름(+선생님 닉네임, 수정·삭제) → 아이 추가.
     final childRows = <Widget>[];

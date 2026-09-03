@@ -49,6 +49,17 @@ class AppUser {
   factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) =>
       AppUser.fromMap(doc.id, doc.data() ?? const {});
 
+  /// 연결된 선생님 {코드: 닉네임}. 저장된 맵 + 구버전 필드·자녀 코드를 병합한다.
+  /// 빈 코드(선생님이 내보낸 아이)는 제외. 키를 정렬해 색 배정이 흔들리지 않게 한다.
+  Map<String, String> teacherDirectory(Iterable<String> childCodes) {
+    final map = <String, String>{...teachers};
+    for (final c in [?teacherCode, ...childCodes]) {
+      if (c.isNotEmpty) map.putIfAbsent(c, () => '선생님');
+    }
+    final keys = map.keys.toList()..sort();
+    return {for (final k in keys) k: map[k]!};
+  }
+
   Map<String, dynamic> toMap() => {
         'role': role == Role.teacher ? 'teacher' : 'parent',
         'name': name,

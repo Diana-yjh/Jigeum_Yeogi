@@ -9,10 +9,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jigeum_yeogi/core/theme/app_theme.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
+import 'package:jigeum_yeogi/features/auth/state/auth_providers.dart';
 import 'package:jigeum_yeogi/features/home/parent_home_screen.dart';
 import 'package:jigeum_yeogi/features/notifications/state/notification_providers.dart';
+import 'package:jigeum_yeogi/models/app_user.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
+import 'package:jigeum_yeogi/models/user_role.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 
 const _schedule = {
@@ -82,7 +85,13 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
+overrides: [
+  appUserProvider.overrideWith((ref) => Stream.value(const AppUser(
+      uid: 'p1',
+      role: Role.parent,
+      name: '홍테스트',
+      email: 'p@test.com',
+      teachers: {'123456': '수학 김선생님', '654321': '피아노 이선생님'}))),
           childrenProvider.overrideWith(
               (ref) => Stream.value([_student('s1', '김테스트'), _student('s2', '박테스트')])),
           childWeekRecordsProvider.overrideWith((ref) => Stream.value(week)),
@@ -96,6 +105,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // ── 첫 페이지: 김테스트(수업 중) ──────────────────────────────
+    // 소속 선생님 칩 — 색 도트 + 닉네임(선생님 2명 이상 연결 시).
+    expect(find.text('수학 김선생님'), findsOneWidget);
+
     expect(find.text('김테스트'), findsOneWidget);
     expect(find.text('박테스트'), findsNothing); // 한 번에 한 명씩
     expect(find.text('지금 학원에 있어요'), findsOneWidget);

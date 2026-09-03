@@ -10,10 +10,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jigeum_yeogi/core/theme/app_colors.dart';
 import 'package:jigeum_yeogi/core/theme/app_theme.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
+import 'package:jigeum_yeogi/features/auth/state/auth_providers.dart';
 import 'package:jigeum_yeogi/features/home/parent_home_screen.dart';
 import 'package:jigeum_yeogi/features/notifications/state/notification_providers.dart';
+import 'package:jigeum_yeogi/models/app_user.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
+import 'package:jigeum_yeogi/models/user_role.dart';
 import 'package:jigeum_yeogi/models/student.dart';
 
 Future<void> _loadFonts() async {
@@ -57,6 +60,8 @@ void main() {
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
+        appUserProvider.overrideWith((r) => Stream.value(const AppUser(
+            uid: 'p1', role: Role.parent, name: '홍테스트', email: 'p@test.com'))),
         childrenProvider.overrideWith((r) => Stream.value([child])),
         childProvider.overrideWith((r) => Stream.value(child)),
         childTodayRecordProvider.overrideWith((r) => Stream.value(null)),
