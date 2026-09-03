@@ -127,7 +127,8 @@ xcrun altool --upload-app   --type ios -f build/ios/ipa/오늘출석.ipa \
 버전은 `pubspec.yaml`의 `version: 1.0.0+1`에서 관리한다. 재업로드 시 빌드 번호(`+1`)를 반드시 올린다.
 
 ### 검증 완료 기록
-- **TestFlight 업로드 성공 (2026-09-03)** — 1.0.0 (4), Delivery UUID `ed9652eb-d3b0-499a-b8c9-6b62a6093fb4` — **iPhone 전용** + 다중 선생님·닉네임·구분색·내보내기·한눈에 리스트 홈
+- **TestFlight 업로드 성공 (2026-09-03)** — 1.0.0 (5), Delivery UUID `e4c17804-d04b-496b-b70d-f31f70976886` — 재연결 흐름·달력 선생님 표시·미연결 기본 카드 제거·칩 정렬 수정. 같은 날 AAB(`~/Downloads/오늘출석-1.0.0+5.aab`, 56.7MB)도 생성
+- TestFlight 업로드 성공 (2026-09-03) — 1.0.0 (4), Delivery UUID `ed9652eb-d3b0-499a-b8c9-6b62a6093fb4` — **iPhone 전용** + 다중 선생님·닉네임·구분색·내보내기·한눈에 리스트 홈
 - TestFlight 업로드 성공 (2026-09-01) — 1.0.0 (3), Delivery UUID `cb0901e7-e4d5-479f-a342-c6518e9f8d96` (앱 이름 "오늘출석", 주간 카드 표시 수정)
 - TestFlight 업로드 성공 (2026-08-31) — 1.0.0 (2), Delivery UUID `261d2514-e178-43fd-9356-d334e9b07347` (알림함·이름 수정·다자녀 달력·배경·오전/오후 표기 포함)
 - TestFlight 업로드 성공 (2026-08-31) — 1.0.0 (1), Delivery UUID `77ac7bc4-a819-4ea0-8dee-9a6f831013b0`
