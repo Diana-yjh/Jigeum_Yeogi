@@ -89,8 +89,12 @@ class ParentHomeScreen extends ConsumerWidget {
             _Header(name: child?.name ?? '연결된 자녀 없음'),
             const SizedBox(height: AppSpace.lg),
             if (child != null && directory.length >= 2) ...[
-              _TeacherChip(
-                  directory: directory, code: child.teacherCode, color: tint),
+              // ListView 직속이면 가로로 꽉 늘어나므로 내용 크기로 감싼다.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _TeacherChip(
+                    directory: directory, code: child.teacherCode, color: tint),
+              ),
               const SizedBox(height: AppSpace.sm),
             ],
             _HeroCard(record: today, tint: tint),
@@ -217,8 +221,13 @@ class _ChildSection extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (directory.length >= 2) ...[
-                  _TeacherChip(
-                      directory: directory, code: e.teacherCode, color: tint),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _TeacherChip(
+                        directory: directory,
+                        code: e.teacherCode,
+                        color: tint),
+                  ),
                   const SizedBox(height: AppSpace.sm),
                 ],
                 _HeroCard(record: today, tint: tint),
