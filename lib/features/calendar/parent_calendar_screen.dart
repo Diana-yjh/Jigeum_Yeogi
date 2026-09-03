@@ -6,8 +6,6 @@ import 'package:jigeum_yeogi/core/theme/app_dimens.dart';
 import 'package:jigeum_yeogi/core/theme/app_text_styles.dart';
 import 'package:jigeum_yeogi/core/util/time_format.dart';
 import 'package:jigeum_yeogi/features/attendance/state/attendance_providers.dart';
-import 'package:jigeum_yeogi/features/auth/state/auth_providers.dart';
-import 'package:jigeum_yeogi/models/app_user.dart';
 import 'package:jigeum_yeogi/features/calendar/widgets/calendar_cells.dart';
 import 'package:jigeum_yeogi/models/attendance_record.dart';
 import 'package:jigeum_yeogi/models/schedule_entry.dart';
@@ -56,27 +54,12 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
         ref.watch(childMonthRecordsProvider(monthKey(_month))).value ??
             const <AttendanceRecord>[];
 
-    // 같은 이름의 수강은 한 아이로 묶어 같은 색을 쓴다.
-    final groupNames = <String>[];
-    final groupOf = <String, int>{}; // studentId → 그룹 인덱스
-    for (final c in children) {
-      final name = c.name.trim();
-      var gi = groupNames.indexOf(name);
-      if (gi < 0) {
-        gi = groupNames.length;
-        groupNames.add(name);
-      }
-      groupOf[c.id] = gi;
-    }
+    // 아이 순서 → 색. 자녀가 한 명이면 primary 하나.
     final colorOf = <String, Color>{
-      for (final c in children) c.id: AppColors.childColor(groupOf[c.id]!),
+      for (var i = 0; i < children.length; i++)
+        children[i].id: AppColors.childColor(i),
     };
     final studentOf = {for (final c in children) c.id: c};
-    // 다중 수강 상세에서 선생님을 구분하기 위한 닉네임·색.
-    final appUser = ref.watch(appUserProvider).value;
-    final directory =
-        appUser?.teacherDirectory(children.map((c) => c.teacherCode)) ??
-            const <String, String>{};
 
     // 날짜별 등원 기록(아이 순서대로).
     final byDay = <int, List<AttendanceRecord>>{};
@@ -89,7 +72,7 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
     }
 
     final selected = _selected ?? _autoSelect(byDay);
-    final multi = groupNames.length >= 2;
+    final multi = children.length >= 2;
 
     return AppScaffold(
       body: SafeArea(
@@ -100,7 +83,7 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
             const SizedBox(height: AppSpace.md),
             _monthHeader(),
             const SizedBox(height: AppSpace.md),
-            _summary(groupNames, groupOf, studentOf, records),
+            _summary(children, records, colorOf),
             const SizedBox(height: AppSpace.md),
             GestureDetector(
               onHorizontalDragEnd: (d) {
@@ -117,8 +100,6 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
               studentOf: studentOf,
               colorOf: colorOf,
               multi: multi,
-              directory: directory,
-              appUser: appUser,
             ),
           ],
         ),
@@ -165,31 +146,30 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
   }
 
   // ── 월간 요약(이번 달 출석) — 다자녀일 땐 색 범례 역할도 겸한다 ──
-  // 같은 이름의 수강은 하나로 합산한다.
-  Widget _summary(List<String> groupNames, Map<String, int> groupOf,
-      Map<String, Student> studentOf, List<AttendanceRecord> records) {
-    int countOf(int gi) => records
-        .where((r) => groupOf[r.studentId] == gi && r.isCheckedIn)
-        .length;
-    if (groupNames.length < 2) {
+  Widget _summary(List<Student> children, List<AttendanceRecord> records,
+      Map<String, Color> colorOf) {
+    if (children.length < 2) {
       final count = records.where((r) => r.isCheckedIn).length;
       return _statCard(caption: '이번 달 출석', child: _countText('$count'));
     }
+    // 아이별 횟수를 한 줄에 나란히.
     return _statCard(
       caption: '이번 달 출석',
       child: Wrap(
         spacing: AppSpace.md,
         runSpacing: AppSpace.xs,
         children: [
-          for (var gi = 0; gi < groupNames.length; gi++)
+          for (final c in children)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _Dot(color: AppColors.childColor(gi), size: 8),
+                _Dot(color: colorOf[c.id]!, size: 8),
                 const SizedBox(width: 6),
-                Text(groupNames[gi], style: AppText.caption),
+                Text(c.name, style: AppText.caption),
                 const SizedBox(width: 6),
-                _countText('${countOf(gi)}'),
+                _countText(
+                  '${records.where((r) => r.studentId == c.id && r.isCheckedIn).length}',
+                ),
               ],
             ),
         ],
@@ -294,13 +274,10 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
       );
     }
 
-    // 같은 아이(그룹)가 같은 날 여러 수강 등원해도 도트는 하나.
-    final seen = <int>{};
-    final dots = <Color>[];
-    for (final r in byDay[day] ?? const <AttendanceRecord>[]) {
-      final c = colorOf[r.studentId] ?? AppColors.primary;
-      if (seen.add(c.toARGB32())) dots.add(c);
-    }
+    final dots = [
+      for (final r in byDay[day] ?? const <AttendanceRecord>[])
+        colorOf[r.studentId] ?? AppColors.primary,
+    ];
     final isSelected = selected.day == day;
     final isToday = now.year == _month.year &&
         now.month == _month.month &&
@@ -368,8 +345,6 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
     required Map<String, Student> studentOf,
     required Map<String, Color> colorOf,
     required bool multi,
-    required Map<String, String> directory,
-    required AppUser? appUser,
   }) {
     final dateText = '${date.month}월 ${date.day}일 ${weekdayLabelOf(date)}요일';
     const dateStyle = TextStyle(
@@ -393,9 +368,8 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
       );
     }
 
-    // 자녀 한 명·단일 기록: 날짜 옆에 정규/보충 pill, 아래 타임바.
-    // (한 아이 다중 수강으로 같은 날 기록이 2개면 아래 블록형으로 내려간다)
-    if (!multi && recs.length == 1) {
+    // 자녀 한 명: 날짜 옆에 정규/보충 pill, 아래 타임바.
+    if (!multi) {
       final r = recs.first;
       final isMakeup =
           studentOf[r.studentId]?.typeOn(dayCode) == ClassType.makeup;
@@ -442,9 +416,6 @@ class _ParentCalendarScreenState extends ConsumerState<ParentCalendarScreen> {
               student: studentOf[recs[i].studentId],
               color: colorOf[recs[i].studentId] ?? AppColors.primary,
               dayCode: dayCode,
-              teacherLabel: directory.length >= 2
-                  ? directory[recs[i].teacherCode]
-                  : null,
             ),
           ],
         ],
@@ -459,13 +430,11 @@ class _ChildStayBlock extends StatelessWidget {
   final Student? student;
   final Color color;
   final String dayCode;
-  final String? teacherLabel; // 다중 선생님일 때 어느 반 기록인지
   const _ChildStayBlock({
     required this.record,
     required this.student,
     required this.color,
     required this.dayCode,
-    this.teacherLabel,
   });
 
   @override
@@ -478,18 +447,10 @@ class _ChildStayBlock extends StatelessWidget {
           children: [
             _Dot(color: color, size: 8),
             const SizedBox(width: AppSpace.sm),
-            Flexible(
+            Expanded(
               child: Text(student?.name ?? '우리 아이',
                   style: AppText.cardTitle, overflow: TextOverflow.ellipsis),
             ),
-            if (teacherLabel != null) ...[
-              const SizedBox(width: AppSpace.sm),
-              Flexible(
-                child: Text(teacherLabel!,
-                    style: AppText.caption, overflow: TextOverflow.ellipsis),
-              ),
-            ],
-            const Spacer(),
             isMakeup ? const StatusPill.makeup() : const StatusPill.regular(),
           ],
         ),
