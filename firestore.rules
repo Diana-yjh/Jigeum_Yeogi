@@ -68,7 +68,10 @@ service cloud.firestore {
                              .affectedKeys().hasOnly(['name', 'teacherCode'])
                         && (request.resource.data.teacherCode
                                == resource.data.teacherCode
-                            || request.resource.data.teacherCode == ''));
+                            || request.resource.data.teacherCode == ''
+                            // 해제됐던 수강(빈 코드)은 존재하는 코드로 재연결 가능.
+                            || (resource.data.teacherCode == ''
+                                && exists(/databases/$(database)/documents/teachers/$(request.resource.data.teacherCode)))));
       // 학부모는 본인 자녀, 선생님은 자기 코드 소속 학생을 삭제 가능.
       allow delete: if (isParent() && resource.data.parentUid == request.auth.uid)
                     || ownsCode(resource.data.teacherCode);

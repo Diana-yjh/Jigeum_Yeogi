@@ -80,6 +80,19 @@ class AuthRepository {
         .update({'teacherCode': ''});
   }
 
+  /// 연결 해제된 수강(빈 코드)을 다른 반에 재연결 — 지난 기록이 이어진다.
+  Future<void> relinkStudent(String studentId, String code) async {
+    final trimmed = code.trim();
+    final teacherDoc = await _db.collection('teachers').doc(trimmed).get();
+    if (!teacherDoc.exists) {
+      throw const AuthFailure('선생님 코드를 찾을 수 없어요. 코드를 다시 확인해주세요.');
+    }
+    await _db
+        .collection('students')
+        .doc(studentId)
+        .update({'teacherCode': trimmed});
+  }
+
   /// 같은 이름의 자녀(모든 반의 수강 문서)를 한 번에 이름 변경.
   Future<void> renameChildEverywhere({
     required String parentUid,

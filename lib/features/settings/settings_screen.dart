@@ -454,6 +454,11 @@ class _ParentSettings extends ConsumerWidget {
             }.toList(),
             namesInClass:
                 inClass.map((c) => c.name.trim()).toSet().toList(),
+            // 연결 해제된 수강(빈 코드) — 재연결에 재사용해 기록을 잇는다.
+            ghostIdByName: {
+              for (final c in children)
+                if (c.teacherCode.isEmpty) c.name.trim(): c.id,
+            },
           ),
         ),
         child: const SizedBox(
@@ -805,12 +810,14 @@ class _AddChildToClassDialog extends ConsumerStatefulWidget {
   final String teacherLabel;
   final List<String> existingNames; // 이 반에 아직 없는 기존 아이들
   final List<String> namesInClass; // 이 반에 이미 있는 이름(중복 방지)
+  final Map<String, String> ghostIdByName; // 연결 해제된 수강 {이름: 문서 id}
   const _AddChildToClassDialog({
     required this.uid,
     required this.code,
     required this.teacherLabel,
     required this.existingNames,
     required this.namesInClass,
+    this.ghostIdByName = const {},
   });
 
   @override
@@ -847,11 +854,17 @@ class _AddChildToClassDialogState
     }
     setState(() => _saving = true);
     try {
-      await ref.read(authRepositoryProvider).addChild(
-            parentUid: widget.uid,
-            teacherCode: widget.code,
-            childName: name,
-          );
+      final ghostId = widget.ghostIdByName[name];
+      if (ghostId != null) {
+        // 해제됐던 수강을 이 반으로 재연결 — 지난 기록 유지.
+        await ref.read(authRepositoryProvider).relinkStudent(ghostId, widget.code);
+      } else {
+        await ref.read(authRepositoryProvider).addChild(
+              parentUid: widget.uid,
+              teacherCode: widget.code,
+              childName: name,
+            );
+      }
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
