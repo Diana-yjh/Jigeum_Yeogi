@@ -56,7 +56,7 @@ Future<void> _loadFonts() async {
 }
 
 void main() {
-  testWidgets('자녀가 둘이면 좌우 스와이프로 넘기고, 아이마다 타임라인·주간 출석이 보인다',
+  testWidgets('수강 리스트: 모든 아이 상태가 한눈에, 탭하면 타임라인·주간 카드 펼침',
       (tester) async {
     await _loadFonts();
 
@@ -71,8 +71,6 @@ void main() {
         inAt: const Duration(hours: 15, minutes: 10),
         outAt: const Duration(hours: 17, minutes: 30));
 
-    // 주간 기록은 자녀 전체가 한 번에 온다 — 아이별로 갈라져야 한다.
-    // s1은 2건, s2는 1건.
     final week = [
       _record('s1', monday, inAt: const Duration(hours: 15)),
       _record('s1', tuesday, inAt: const Duration(hours: 15)),
@@ -85,13 +83,13 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-overrides: [
-  appUserProvider.overrideWith((ref) => Stream.value(const AppUser(
-      uid: 'p1',
-      role: Role.parent,
-      name: '홍테스트',
-      email: 'p@test.com',
-      teachers: {'123456': '수학 김선생님', '654321': '피아노 이선생님'}))),
+        overrides: [
+          appUserProvider.overrideWith((ref) => Stream.value(const AppUser(
+              uid: 'p1',
+              role: Role.parent,
+              name: '홍테스트',
+              email: 'p@test.com',
+              teachers: {'123456': '수학 김선생님', '654321': '피아노 이선생님'}))),
           childrenProvider.overrideWith(
               (ref) => Stream.value([_student('s1', '김테스트'), _student('s2', '박테스트')])),
           childWeekRecordsProvider.overrideWith((ref) => Stream.value(week)),
@@ -104,39 +102,35 @@ overrides: [
     );
     await tester.pumpAndSettle();
 
-    // ── 첫 페이지: 김테스트(수업 중) ──────────────────────────────
-    // 소속 선생님 칩 — 색 도트 + 닉네임(선생님 2명 이상 연결 시).
-    expect(find.text('수학 김선생님'), findsOneWidget);
-
+    // 스와이프 없이 모든 수강 상태가 한 화면에.
+    expect(find.byType(PageView), findsNothing);
     expect(find.text('김테스트'), findsOneWidget);
-    expect(find.text('박테스트'), findsNothing); // 한 번에 한 명씩
-    expect(find.text('지금 학원에 있어요'), findsOneWidget);
-    expect(find.text('오후 3:02'), findsOneWidget); // 등원 시각
-    expect(find.text('--:--'), findsOneWidget); // 아직 하원 전
-    expect(find.text('이번 주 출석'), findsOneWidget);
-    expect(find.text('2 / 3회'), findsOneWidget);
-
-    // 페이지 표시 점이 자녀 수만큼.
-    expect(find.byType(PageView), findsOneWidget);
-
-    // ── 옆으로 밀면 박테스트(하원 완료) ───────────────────────────
-    await tester.drag(find.byType(PageView), const Offset(-400, 0));
-    await tester.pumpAndSettle();
-
     expect(find.text('박테스트'), findsOneWidget);
-    expect(find.text('김테스트'), findsNothing);
-    expect(find.text('집에 잘 갔어요'), findsOneWidget);
-    expect(find.text('오후 3:10'), findsOneWidget); // 등원
-    expect(find.text('오후 5:30'), findsOneWidget); // 하원
-    expect(find.text('이번 주 출석'), findsOneWidget);
-    // 주간 횟수는 아이별로 갈린다(형제 것이 합산되지 않는다).
-    expect(find.text('1 / 3회'), findsOneWidget);
-    expect(find.text('2 / 3회'), findsNothing);
+    expect(find.textContaining('부터 학원에 있어요'), findsOneWidget); // 수업 중
+    expect(find.textContaining('하원'), findsWidgets); // 하원 완료 상태줄
 
-    // ── 다시 오른쪽으로 밀면 첫 아이로 돌아온다 ────────────────────
-    await tester.drag(find.byType(PageView), const Offset(400, 0));
+    // 선생님 닉네임으로 반 구분(둘 다 수학 코드).
+    expect(find.text('수학 김선생님'), findsNWidgets(2));
+
+    // 접힌 상태에선 주간 카드 없음.
+    expect(find.text('이번 주 출석'), findsNothing);
+
+    // 김테스트 탭 → 히어로 타임라인 + 기존 주간 카드가 펼쳐진다.
+    await tester.tap(find.text('김테스트'));
     await tester.pumpAndSettle();
-    expect(find.text('김테스트'), findsOneWidget);
-    expect(find.text('2 / 3회'), findsOneWidget);
+    expect(find.text('지금 학원에 있어요'), findsOneWidget);
+    expect(find.text('이번 주 출석'), findsOneWidget);
+    expect(find.text('2 / 3회'), findsOneWidget); // 이 수강 것만(형제 미합산)
+
+    // 박테스트도 펼치면 각자 주간 카드 — 값이 갈린다.
+    await tester.tap(find.text('박테스트'));
+    await tester.pumpAndSettle();
+    expect(find.text('이번 주 출석'), findsNWidgets(2));
+    expect(find.text('1 / 3회'), findsOneWidget);
+
+    // 다시 탭하면 접힌다.
+    await tester.tap(find.text('김테스트'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 3회'), findsNothing);
   });
 }
