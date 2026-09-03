@@ -198,7 +198,8 @@ class _ParentSettings extends ConsumerWidget {
       ...children.map((c) => c.teacherCode),
     ];
     for (final c in legacyCodes) {
-      teachers.putIfAbsent(c, () => '선생님');
+      // 빈 코드 = 선생님이 반에서 내보낸 아이(연결 없음) — 목록에 넣지 않는다.
+      if (c.isNotEmpty) teachers.putIfAbsent(c, () => '선생님');
     }
 
     // 우리 아이 섹션 행: 자녀 이름(+선생님 닉네임, 수정·삭제) → 아이 추가.
@@ -209,8 +210,10 @@ class _ParentSettings extends ConsumerWidget {
       for (final c in children) {
         childRows.add(_childRow(
           c.name,
-          // 선생님이 여럿일 때만 누구 반인지 표시.
-          caption: teachers.length >= 2 ? teachers[c.teacherCode] : null,
+          // 연결 해제된 아이는 항상 표시, 그 외엔 선생님 여럿일 때만.
+          caption: c.teacherCode.isEmpty
+              ? '연결된 선생님 없음'
+              : (teachers.length >= 2 ? teachers[c.teacherCode] : null),
           onEdit: () => showDialog(
             context: context,
             builder: (_) => EditNameDialog(

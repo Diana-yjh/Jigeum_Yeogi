@@ -71,6 +71,15 @@ class AuthRepository {
         .set({'name': name.trim()}, SetOptions(merge: true));
   }
 
+  /// 선생님이 학생을 반에서 내보내기 — 학생 문서는 남기고 연결만 해제.
+  /// 학부모 앱에는 아이와 지난 출결 기록이 그대로 남는다.
+  Future<void> unlinkStudent(String studentId) {
+    return _db
+        .collection('students')
+        .doc(studentId)
+        .update({'teacherCode': ''});
+  }
+
   /// 학생 삭제 — 학부모(내 자녀)·선생님(내 반 학생) 공용.
   /// 출결 기록은 Cloud Functions(onStudentDelete)가 정리.
   Future<void> deleteChild(String studentId) {

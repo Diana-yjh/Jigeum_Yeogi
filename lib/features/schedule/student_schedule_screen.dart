@@ -75,16 +75,16 @@ class _StudentScheduleScreenState
     }
   }
 
-  /// 학생 삭제 — 학부모 앱에서도 사라지고 출결 기록도 함께 삭제된다.
+  /// 학생을 반에서 내보내기 — 연결만 해제. 학부모 앱에는 아이·기록이 남는다.
   Future<void> _confirmDelete() async {
     final name = widget.student.name;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('$name 학생 삭제'),
-        content: const Text('학생을 반에서 삭제할까요?\n'
-            '학부모 앱에서도 아이가 사라지고, 출결 기록도 함께 삭제됩니다.\n'
-            '이 작업은 되돌릴 수 없어요.'),
+        title: Text('$name 학생 내보내기'),
+        content: const Text('학생을 반에서 내보낼까요?\n'
+            '학부모 앱에는 아이와 지난 기록이 그대로 남고,\n'
+            '선생님과의 연결만 해제됩니다.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -93,7 +93,7 @@ class _StudentScheduleScreenState
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-            child: const Text('삭제'),
+            child: const Text('내보내기'),
           ),
         ],
       ),
@@ -102,19 +102,18 @@ class _StudentScheduleScreenState
 
     setState(() => _saving = true);
     try {
-      // 학부모의 자녀 삭제와 같은 경로 — 출결 기록은 Cloud Functions가 정리.
-      await ref.read(authRepositoryProvider).deleteChild(widget.student.id);
+      await ref.read(authRepositoryProvider).unlinkStudent(widget.student.id);
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$name 학생을 삭제했어요.')),
+          SnackBar(content: Text('$name 학생을 반에서 내보냈어요.')),
         );
       }
     } catch (_) {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('삭제 중 문제가 발생했어요.')),
+          const SnackBar(content: Text('내보내기 중 문제가 발생했어요.')),
         );
       }
     }
@@ -130,8 +129,8 @@ class _StudentScheduleScreenState
         title: Text('${widget.student.name} 스케줄'),
         actions: [
           IconButton(
-            tooltip: '학생 삭제',
-            icon: const Icon(Icons.delete_outline, color: AppColors.textSub),
+            tooltip: '반에서 내보내기',
+            icon: const Icon(Icons.person_remove_outlined, color: AppColors.textSub),
             onPressed: _saving ? null : _confirmDelete,
           ),
         ],
